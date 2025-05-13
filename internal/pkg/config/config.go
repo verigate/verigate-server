@@ -36,7 +36,7 @@ func Load() {
 		JWTPrivateKey:    mustGetEnv("JWT_PRIVATE_KEY"),
 		JWTPublicKey:     mustGetEnv("JWT_PUBLIC_KEY"),
 		JWTAccessExpiry:  getEnv("JWT_ACCESS_EXPIRY", "15m"),
-		JWTRefreshExpiry: getEnv("JWT_REFRESH_EXPIRY", "7d"),
+		JWTRefreshExpiry: getEnv("JWT_REFRESH_EXPIRY", "168h"),
 		PostgresHost:     getEnv("POSTGRES_HOST", "localhost"),
 		PostgresPort:     getEnv("POSTGRES_PORT", "5432"),
 		PostgresDB:       getEnv("POSTGRES_DB", "oauth_server"),
