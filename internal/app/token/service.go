@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	"github.com/verigate/verigate-server/internal/app/auth"
 	"github.com/verigate/verigate-server/internal/pkg/config"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
@@ -24,13 +25,14 @@ type CacheRepository interface {
 type Service struct {
 	tokenRepo     Repository
 	cacheRepo     CacheRepository
+	authService   *auth.Service
 	privateKey    *rsa.PrivateKey
 	publicKey     *rsa.PublicKey
 	accessExpiry  time.Duration
 	refreshExpiry time.Duration
 }
 
-func NewService(tokenRepo Repository, cacheRepo CacheRepository) *Service {
+func NewService(tokenRepo Repository, cacheRepo CacheRepository, authService *auth.Service) *Service {
 	// Parse JWT keys
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.AppConfig.JWTPrivateKey))
 	if err != nil {
@@ -56,6 +58,7 @@ func NewService(tokenRepo Repository, cacheRepo CacheRepository) *Service {
 	return &Service{
 		tokenRepo:     tokenRepo,
 		cacheRepo:     cacheRepo,
+		authService:   authService,
 		privateKey:    privateKey,
 		publicKey:     publicKey,
 		accessExpiry:  accessExpiry,

@@ -18,8 +18,8 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
-	// All token endpoints require authentication
-	r.Use(middleware.Auth())
+	// All token endpoints require web authentication
+	r.Use(middleware.WebAuth(h.service.authService))
 
 	r.GET("", h.List)
 	r.DELETE("/:id", h.Revoke)

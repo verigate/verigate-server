@@ -19,8 +19,8 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
-	// All client endpoints require authentication
-	r.Use(middleware.Auth())
+	// All client endpoints require web authentication
+	r.Use(middleware.WebAuth(h.service.authService))
 
 	r.POST("", h.Create)
 	r.GET("", h.List)
