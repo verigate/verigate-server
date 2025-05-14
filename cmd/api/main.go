@@ -4,13 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/ve	// Services
-	authService := auth.NewService(authRepo)  // Added
-	userService := user.NewService(userRepo, authService)  // Modified
-	clientService := client.NewService(clientRepo, authService)  // Modified
-	scopeService := scope.NewService(scopeRepo)
-	tokenService := token.NewService(tokenRepo, cacheRepo)
-	oauthService := oauth.NewService(oauthRepo, userService, clientService, tokenService, scopeService)verigate-server/internal/app/auth"
+	"github.com/verigate/verigate-server/internal/app/auth"
 	"github.com/verigate/verigate-server/internal/app/client"
 	"github.com/verigate/verigate-server/internal/app/oauth"
 	"github.com/verigate/verigate-server/internal/app/scope"
@@ -59,11 +53,11 @@ func main() {
 	authRepo := redis.NewAuthRepository(redisClient) // Added
 
 	// Services
-	authService := auth.NewService(authRepo)              // Added
-	userService := user.NewService(userRepo, authService) // Modified
+	authService := auth.NewService(authRepo)                    // Added
+	userService := user.NewService(userRepo, authService)       // Modified
 	clientService := client.NewService(clientRepo, authService) // Modified
 	scopeService := scope.NewService(scopeRepo)
-	tokenService := token.NewService(tokenRepo, cacheRepo, authService) // Modified
+	tokenService := token.NewService(tokenRepo, cacheRepo, authService)                                              // Modified
 	oauthService := oauth.NewService(oauthRepo, userService, clientService, tokenService, scopeService, authService) // Modified
 
 	// Handlers
