@@ -74,3 +74,28 @@ func ValidateToken(tokenString string) (*Claims, error) {
 
 	return nil, jwt.ErrInvalidKey
 }
+
+// ValidateCustomToken validates a JWT token used for web app authentication.
+// This function is distinct from ValidateToken which is used for OAuth.
+func ValidateCustomToken(tokenString string, issuer string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return publicKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+		// Verify issuer
+		if claims.RegisteredClaims.Issuer != issuer {
+			return nil, jwt.NewValidationError("invalid issuer", jwt.ValidationErrorIssuer)
+		}
+		return claims, nil
+	}
+
+	return nil, jwt.ErrSignatureInvalid
+}

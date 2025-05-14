@@ -6,16 +6,21 @@ import (
 	"encoding/base64"
 	"time"
 
+	"github.com/verigate/verigate-server/internal/app/auth"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
 )
 
 type Service struct {
-	repo Repository
+	repo        Repository
+	authService *auth.Service
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo Repository, authService *auth.Service) *Service {
+	return &Service{
+		repo:        repo,
+		authService: authService,
+	}
 }
 
 func (s *Service) Create(ctx context.Context, ownerID uint, req CreateClientRequest) (*ClientResponse, error) {

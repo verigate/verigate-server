@@ -37,3 +37,23 @@ type UserResponse struct {
 	CreatedAt         time.Time  `json:"created_at"`
 	LastLoginAt       *time.Time `json:"last_login_at,omitempty"`
 }
+
+// LoginResponse is returned after a successful login.
+type LoginResponse struct {
+	User         UserResponse `json:"user"`
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token"`
+	ExpiresAt    time.Time    `json:"expires_at"`
+}
+
+// RefreshTokenRequest is the structure for token refresh requests.
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+// RefreshTokenResponse is returned after a successful token refresh.
+type RefreshTokenResponse struct {
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	ExpiresAt    time.Time `json:"expires_at"`
+}

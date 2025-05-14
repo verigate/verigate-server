@@ -21,16 +21,24 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	// Public endpoints
-	r.GET("/authorize", middleware.Auth(), h.Authorize)
 	r.POST("/token", h.Token)
 	r.POST("/revoke", h.Revoke)
 
-	// Protected endpoints
-	r.GET("/userinfo", middleware.Auth(), h.UserInfo)
+	// OAuth protected endpoints
+	oauthProtected := r.Group("")
+	oauthProtected.Use(middleware.Auth())
+	{
+		oauthProtected.GET("/authorize", h.Authorize)
+		oauthProtected.GET("/userinfo", h.UserInfo)
+	}
 
-	// Consent endpoints
-	r.GET("/consent", middleware.Auth(), h.ShowConsent)
-	r.POST("/consent", middleware.Auth(), h.HandleConsent)
+	// Web app protected endpoints (consent screen)
+	webProtected := r.Group("")
+	webProtected.Use(middleware.WebAuth(h.service.authService))
+	{
+		webProtected.GET("/consent", h.ShowConsent)
+		webProtected.POST("/consent", h.HandleConsent)
+	}
 }
 
 func (h *Handler) Authorize(c *gin.Context) {

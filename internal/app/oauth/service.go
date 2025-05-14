@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/verigate/verigate-server/internal/app/auth"
 	"github.com/verigate/verigate-server/internal/app/client"
 	"github.com/verigate/verigate-server/internal/app/scope"
 	"github.com/verigate/verigate-server/internal/app/token"
@@ -22,6 +23,7 @@ type Service struct {
 	clientService *client.Service
 	tokenService  *token.Service
 	scopeService  *scope.Service
+	authService   *auth.Service
 }
 
 func NewService(
@@ -30,6 +32,7 @@ func NewService(
 	clientService *client.Service,
 	tokenService *token.Service,
 	scopeService *scope.Service,
+	authService *auth.Service,
 ) *Service {
 	return &Service{
 		oauthRepo:     oauthRepo,
@@ -37,6 +40,7 @@ func NewService(
 		clientService: clientService,
 		tokenService:  tokenService,
 		scopeService:  scopeService,
+		authService:   authService,
 	}
 }
 

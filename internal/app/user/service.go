@@ -4,16 +4,21 @@ import (
 	"context"
 	"time"
 
+	"github.com/verigate/verigate-server/internal/app/auth"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
 )
 
 type Service struct {
-	repo Repository
+	repo        Repository
+	authService *auth.Service
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo Repository, authService *auth.Service) *Service {
+	return &Service{
+		repo:        repo,
+		authService: authService,
+	}
 }
 
 func (s *Service) Register(ctx context.Context, req RegisterRequest) (*UserResponse, error) {
@@ -60,7 +65,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*UserRespo
 	return s.toResponse(user), nil
 }
 
-func (s *Service) Login(ctx context.Context, req LoginRequest) (*UserResponse, error) {
+func (s *Service) Login(ctx context.Context, req LoginRequest, userAgent, ipAddress string) (*LoginResponse, error) {
 	user, err := s.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, err
@@ -84,7 +89,18 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*UserResponse, e
 		// Not critical, continue
 	}
 
-	return s.toResponse(user), nil
+	// Generate tokens
+	tokenPair, err := s.authService.CreateTokenPair(ctx, user.ID, userAgent, ipAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoginResponse{
+		User:         *s.toResponse(user),
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresAt:    tokenPair.AccessTokenExpiresAt,
+	}, nil
 }
 
 func (s *Service) GetByID(ctx context.Context, id uint) (*UserResponse, error) {
@@ -156,6 +172,25 @@ func (s *Service) Delete(ctx context.Context, id uint) error {
 	}
 
 	return s.repo.Delete(ctx, id)
+}
+
+// RefreshToken uses a refresh token to get a new token pair
+func (s *Service) RefreshToken(ctx context.Context, refreshToken, userAgent, ipAddress string) (*RefreshTokenResponse, error) {
+	tokenPair, err := s.authService.RefreshTokens(ctx, refreshToken, userAgent, ipAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RefreshTokenResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresAt:    tokenPair.AccessTokenExpiresAt,
+	}, nil
+}
+
+// Logout revokes all the user's refresh tokens
+func (s *Service) Logout(ctx context.Context, userID uint) error {
+	return s.authService.RevokeAllUserRefreshTokens(ctx, userID)
 }
 
 func (s *Service) toResponse(user *User) *UserResponse {

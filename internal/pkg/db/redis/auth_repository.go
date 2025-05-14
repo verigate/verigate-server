@@ -1,0 +1,191 @@
+package redis
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/go-redis/redis/v8"
+	"github.com/verigate/verigate-server/internal/app/auth"
+	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
+	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
+)
+
+const (
+	refreshTokenKeyPrefix = "auth:refresh_token:"
+	userTokensKeyPrefix   = "auth:user_tokens:"
+)
+
+type authRepository struct {
+	client *redis.Client
+}
+
+// NewAuthRepository creates a Redis-based authentication repository.
+func NewAuthRepository(client *redis.Client) auth.Repository {
+	return &authRepository{client: client}
+}
+
+// SaveRefreshToken stores a new refresh token in Redis.
+func (r *authRepository) SaveRefreshToken(ctx context.Context, token *auth.RefreshToken) error {
+	// Serialize the refresh token data to JSON
+	tokenData, err := json.Marshal(token)
+	if err != nil {
+		return errors.Internal("failed to marshal refresh token")
+	}
+
+	// Create a pipeline
+	pipe := r.client.Pipeline()
+
+	// Store token by token ID
+	tokenKey := refreshTokenKeyPrefix + token.ID
+	pipe.Set(ctx, tokenKey, tokenData, time.Until(token.ExpiresAt))
+
+	// Add to user's token list
+	userTokensKey := userTokensKeyPrefix + fmt.Sprintf("%d", token.UserID)
+	pipe.SAdd(ctx, userTokensKey, token.ID)
+	pipe.ExpireAt(ctx, userTokensKey, token.ExpiresAt)
+
+	// Execute pipeline
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return errors.Internal("failed to save refresh token: " + err.Error())
+	}
+
+	return nil
+}
+
+// FindRefreshToken looks up a refresh token by ID.
+func (r *authRepository) FindRefreshToken(ctx context.Context, tokenID string) (*auth.RefreshToken, error) {
+	tokenKey := refreshTokenKeyPrefix + tokenID
+	data, err := r.client.Get(ctx, tokenKey).Result()
+
+	if err == redis.Nil {
+		return nil, nil // Token doesn't exist
+	} else if err != nil {
+		return nil, errors.Internal("failed to find refresh token: " + err.Error())
+	}
+
+	var token auth.RefreshToken
+	if err := json.Unmarshal([]byte(data), &token); err != nil {
+		return nil, errors.Internal("failed to unmarshal refresh token")
+	}
+
+	return &token, nil
+}
+
+// FindRefreshTokenByToken looks up a refresh token by its hashed token value.
+func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, refreshToken string) (*auth.RefreshToken, error) {
+	// Scan all token keys
+	var cursor uint64
+	var keys []string
+	var err error
+
+	for {
+		keys, cursor, err = r.client.Scan(ctx, cursor, refreshTokenKeyPrefix+"*", 100).Result()
+		if err != nil {
+			return nil, errors.Internal("failed to scan refresh tokens: " + err.Error())
+		}
+
+		// Check each token
+		for _, key := range keys {
+			data, err := r.client.Get(ctx, key).Result()
+			if err != nil {
+				continue // Skip this token
+			}
+
+			var token auth.RefreshToken
+			if err := json.Unmarshal([]byte(data), &token); err != nil {
+				continue // Skip this token
+			}
+
+			// Verify the token using hash compare
+			if hash.CompareHashAndPassword(token.Token, refreshToken) == nil {
+				return &token, nil
+			}
+		}
+
+		if cursor == 0 {
+			break
+		}
+	}
+
+	return nil, nil // No matching token found
+}
+
+// RevokeRefreshToken marks a specific refresh token as revoked.
+func (r *authRepository) RevokeRefreshToken(ctx context.Context, tokenID string) error {
+	tokenKey := refreshTokenKeyPrefix + tokenID
+
+	// Get the existing token
+	data, err := r.client.Get(ctx, tokenKey).Result()
+	if err == redis.Nil {
+		return errors.NotFound("refresh token not found")
+	} else if err != nil {
+		return errors.Internal("failed to get refresh token: " + err.Error())
+	}
+
+	var token auth.RefreshToken
+	if err := json.Unmarshal([]byte(data), &token); err != nil {
+		return errors.Internal("failed to unmarshal refresh token")
+	}
+
+	// Mark the token as revoked
+	token.IsRevoked = true
+
+	// Save the updated token
+	updatedData, err := json.Marshal(token)
+	if err != nil {
+		return errors.Internal("failed to marshal updated refresh token")
+	}
+
+	// Preserve the expiry time
+	ttl, err := r.client.TTL(ctx, tokenKey).Result()
+	if err != nil {
+		ttl = time.Until(token.ExpiresAt) // Use default if TTL fails
+	}
+
+	return r.client.Set(ctx, tokenKey, updatedData, ttl).Err()
+}
+
+// RevokeAllUserRefreshTokens revokes all refresh tokens for a user.
+func (r *authRepository) RevokeAllUserRefreshTokens(ctx context.Context, userID uint) error {
+	userTokensKey := userTokensKeyPrefix + fmt.Sprintf("%d", userID)
+
+	// Get all token IDs for the user
+	tokenIDs, err := r.client.SMembers(ctx, userTokensKey).Result()
+	if err != nil && err != redis.Nil {
+		return errors.Internal("failed to get user tokens: " + err.Error())
+	}
+
+	// Revoke each token
+	for _, tokenID := range tokenIDs {
+		if err := r.RevokeRefreshToken(ctx, tokenID); err != nil {
+			// Log error but continue with the others
+			// TODO: Add proper logging
+		}
+	}
+
+	return nil
+}
+
+// DeleteExpiredTokens removes expired tokens.
+// Redis automatically removes expired keys, so this is a no-op.
+func (r *authRepository) DeleteExpiredTokens(ctx context.Context) error {
+	// Redis handles key expiration automatically
+	return nil
+}
+
+// IsRefreshTokenRevoked checks if a refresh token has been revoked.
+func (r *authRepository) IsRefreshTokenRevoked(ctx context.Context, tokenID string) (bool, error) {
+	token, err := r.FindRefreshToken(ctx, tokenID)
+	if err != nil {
+		return false, err
+	}
+
+	if token == nil {
+		return true, nil // Token not found, consider revoked
+	}
+
+	return token.IsRevoked, nil
+}
