@@ -71,7 +71,7 @@ func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope
 	}
 
 	// Generate refresh token
-	refreshToken, refreshTokenID, err := s.createRefreshToken(userID, clientID, scope, accessTokenID)
+	refreshToken, refreshTokenID, err := s.createRefreshToken()
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +360,7 @@ func (s *Service) createAccessToken(userID uint, clientID, scope string) (string
 	return signedToken, tokenID, nil
 }
 
-func (s *Service) createRefreshToken(userID uint, clientID, scope, accessTokenID string) (string, string, error) {
+func (s *Service) createRefreshToken() (string, string, error) {
 	tokenID := uuid.New().String()
 
 	b := make([]byte, 32)
