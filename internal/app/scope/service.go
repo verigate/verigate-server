@@ -1,3 +1,5 @@
+// Package scope provides functionality for managing OAuth scopes,
+// including scope registration, retrieval and validation.
 package scope
 
 import (
@@ -5,14 +7,22 @@ import (
 	"strings"
 )
 
+// Service handles scope-related operations including validation,
+// retrieval, and management of OAuth permission scopes.
 type Service struct {
 	repo Repository
 }
 
+// NewService creates a new scope service instance with the given repository.
+// The repository is used for persistence operations related to scopes.
 func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
+// ValidateScope checks if all requested scopes are allowed and exist in the system.
+// It takes a space-separated list of requested scopes and allowed scopes,
+// and verifies that all requested scopes are both allowed and registered in the database.
+// Returns true if all scopes are valid, false if any scope is invalid or not allowed.
 func (s *Service) ValidateScope(ctx context.Context, requested, allowed string) (bool, error) {
 	requestedScopes := strings.Split(requested, " ")
 	allowedScopes := strings.Split(allowed, " ")

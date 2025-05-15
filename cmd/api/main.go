@@ -1,3 +1,5 @@
+// Package main provides the entry point for the Verigate Server API.
+// It initializes configuration, databases, services, and HTTP routes.
 package main
 
 import (
@@ -19,6 +21,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// main is the entry point for the Verigate Server API.
+// It initializes all components and starts the HTTP server.
 func main() {
 	// Configuration and logging
 	config.Load()
@@ -76,6 +80,9 @@ func main() {
 	}
 }
 
+// setupLogger initializes and configures the application logger.
+// It creates either a production or development logger based on the application environment.
+// Returns the configured zap logger and any error encountered during setup.
 func setupLogger() (*zap.Logger, error) {
 	var zapConfig zap.Config
 
@@ -88,6 +95,10 @@ func setupLogger() (*zap.Logger, error) {
 	return zapConfig.Build()
 }
 
+// setupRouter configures the HTTP router with all routes and middleware.
+// It registers all handlers, sets up middleware for logging, error handling, rate limiting,
+// CORS, and recovery from panics.
+// Returns the configured gin engine ready to serve HTTP requests.
 func setupRouter(
 	logger *zap.Logger,
 	userHandler *user.Handler,

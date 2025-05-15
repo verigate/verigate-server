@@ -1,3 +1,5 @@
+// Package redis provides Redis connection and repository implementations
+// for caching and ephemeral data storage in the Verigate Server application.
 package redis
 
 import (
@@ -9,8 +11,13 @@ import (
 	"github.com/verigate/verigate-server/internal/pkg/config"
 )
 
+// client is the shared Redis client instance used across the application
 var client *redis.Client
 
+// NewConnection establishes a new Redis connection using configuration settings.
+// It initializes the Redis client, validates the connection with a ping,
+// and stores the client in a package-level variable for later access.
+// Returns the Redis client or an error if the connection fails.
 func NewConnection() (*redis.Client, error) {
 	db, err := strconv.Atoi(config.AppConfig.RedisDB)
 	if err != nil {
@@ -31,6 +38,8 @@ func NewConnection() (*redis.Client, error) {
 	return client, nil
 }
 
+// GetClient returns the shared Redis client instance.
+// This allows reusing the same connection throughout the application.
 func GetClient() *redis.Client {
 	return client
 }

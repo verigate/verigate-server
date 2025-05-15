@@ -1,3 +1,6 @@
+// Package auth provides authentication and authorization services
+// for the application, including token generation, validation,
+// and management of authentication sessions.
 package auth
 
 import (
@@ -16,6 +19,8 @@ import (
 )
 
 // Service handles authentication-related business logic.
+// It manages the creation, validation, and revocation of tokens,
+// as well as other authentication-related operations.
 type Service struct {
 	repo              Repository
 	privateKey        *rsa.PrivateKey
@@ -26,6 +31,8 @@ type Service struct {
 }
 
 // NewService creates a new authentication service instance.
+// It initializes the service with RSA keys and token expiration settings
+// loaded from the application configuration.
 func NewService(repo Repository) *Service {
 	// Parse JWT keys
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.AppConfig.JWTPrivateKey))
@@ -60,6 +67,9 @@ func NewService(repo Repository) *Service {
 }
 
 // CreateTokenPair generates an access token and refresh token pair for a user.
+// The access token is a JWT with user identity claims, and the refresh token
+// is a secure random string that can be exchanged for a new token pair.
+// User agent and IP address are stored for audit purposes.
 func (s *Service) CreateTokenPair(ctx context.Context, userID uint, userAgent, ipAddress string) (*TokenPair, error) {
 	// Generate access token
 	tokenID := uuid.New().String()
@@ -121,6 +131,7 @@ func (s *Service) CreateTokenPair(ctx context.Context, userID uint, userAgent, i
 }
 
 // RefreshTokens uses a refresh token to issue a new token pair (Refresh Token Rotation pattern).
+// It validates the provided refresh token, revokes it, and generates a new token pair.
 func (s *Service) RefreshTokens(ctx context.Context, refreshToken, userAgent, ipAddress string) (*TokenPair, error) {
 	// Find the refresh token
 	token, err := s.repo.FindRefreshTokenByToken(ctx, refreshToken)
@@ -153,6 +164,7 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken, userAgent, ip
 }
 
 // ValidateAccessToken validates an access token and returns the user ID.
+// It checks the token's signature, expiration, issuer, and type.
 func (s *Service) ValidateAccessToken(tokenString string) (uint, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Validate the signing method
@@ -198,11 +210,13 @@ func (s *Service) ValidateAccessToken(tokenString string) (uint, error) {
 }
 
 // RevokeRefreshToken revokes a specific refresh token.
+// It marks the token as revoked in the repository.
 func (s *Service) RevokeRefreshToken(ctx context.Context, tokenID string) error {
 	return s.repo.RevokeRefreshToken(ctx, tokenID)
 }
 
 // RevokeAllUserRefreshTokens revokes all refresh tokens for a user.
+// It marks all tokens associated with the user as revoked in the repository.
 func (s *Service) RevokeAllUserRefreshTokens(ctx context.Context, userID uint) error {
 	return s.repo.RevokeAllUserRefreshTokens(ctx, userID)
 }

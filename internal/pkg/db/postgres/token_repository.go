@@ -1,3 +1,5 @@
+// Package postgres provides PostgreSQL database connection and repository implementations
+// for the Verigate Server application.
 package postgres
 
 import (
@@ -8,14 +10,21 @@ import (
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 )
 
+// tokenRepository implements the token.Repository interface using PostgreSQL.
+// It handles persistence of OAuth access and refresh tokens.
 type tokenRepository struct {
 	db *sql.DB
 }
 
+// NewTokenRepository creates a new PostgreSQL implementation of the token repository.
+// It requires an active database connection to operate.
 func NewTokenRepository(db *sql.DB) token.Repository {
 	return &tokenRepository{db: db}
 }
 
+// SaveAccessToken persists a new access token to the database.
+// It stores all token properties and sets the auto-generated ID in the token object.
+// Returns an error if the database operation fails.
 func (r *tokenRepository) SaveAccessToken(ctx context.Context, token *token.AccessToken) error {
 	query := `
 		INSERT INTO access_tokens (token_id, token_hash, client_id, user_id, scope, expires_at, created_at, is_revoked)
@@ -41,6 +50,8 @@ func (r *tokenRepository) SaveAccessToken(ctx context.Context, token *token.Acce
 	return nil
 }
 
+// FindAccessToken retrieves an access token from the database by its token ID.
+// Returns the token or an error if not found or if the database operation fails.
 func (r *tokenRepository) FindAccessToken(ctx context.Context, tokenID string) (*token.AccessToken, error) {
 	var t token.AccessToken
 	query := `

@@ -1,3 +1,4 @@
+// Package middleware provides HTTP middleware functions for the application.
 package middleware
 
 import (
@@ -8,6 +9,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// Recovery creates a middleware that recovers from any panics in subsequent handlers.
+// It logs the panic details with the provided logger and returns a standardized error response.
+// This middleware should be added early in the middleware chain to catch panics from all handlers.
 func Recovery(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
@@ -31,6 +35,10 @@ func Recovery(logger *zap.Logger) gin.HandlerFunc {
 	}
 }
 
+// RequestLogger creates a middleware that logs details about each request.
+// It captures the request method, path, status code, response time, client IP,
+// user agent, and number of errors encountered during request processing.
+// This middleware provides valuable information for monitoring and debugging.
 func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
