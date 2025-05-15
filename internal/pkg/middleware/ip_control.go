@@ -1,3 +1,4 @@
+// Package middleware provides HTTP middleware functions for the application.
 package middleware
 
 import (
@@ -9,11 +10,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// IPControl holds the IP address whitelist and blacklist configurations.
+// It provides a way to control access to the API based on client IP addresses.
 type IPControl struct {
-	Whitelist []string
-	Blacklist []string
+	Whitelist []string // List of allowed IP addresses or CIDR ranges
+	Blacklist []string // List of blocked IP addresses or CIDR ranges
 }
 
+// NewIPControl creates a new IP control configuration with whitelist and blacklist.
+// Both parameters accept IP addresses or CIDR notation (e.g., "192.168.1.0/24").
 func NewIPControl(whitelist, blacklist []string) *IPControl {
 	return &IPControl{
 		Whitelist: whitelist,
@@ -21,6 +26,10 @@ func NewIPControl(whitelist, blacklist []string) *IPControl {
 	}
 }
 
+// IPControlMiddleware creates a middleware that controls access based on client IP address.
+// The middleware first checks if the client IP is blacklisted, then checks if it's whitelisted.
+// If a whitelist is provided and the client IP is not in it, access is denied.
+// If the client IP is blacklisted, access is denied regardless of whitelist.
 func IPControlMiddleware(ipControl *IPControl) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientIP := c.ClientIP()
@@ -55,7 +64,9 @@ func IPControlMiddleware(ipControl *IPControl) gin.HandlerFunc {
 	}
 }
 
-// matchIP supports both single IPs and CIDR notation
+// matchIP checks if an IP address matches a pattern.
+// It supports both direct IP comparison and CIDR notation (e.g., 192.168.1.0/24).
+// Returns true if the IP matches the pattern, false otherwise.
 func matchIP(ip, pattern string) bool {
 	// Direct IP comparison
 	if !strings.Contains(pattern, "/") {

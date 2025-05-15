@@ -1,3 +1,6 @@
+// Package redis provides Redis-based implementations of the application's repositories.
+// It handles caching, authentication token storage, and other data that benefits from
+// in-memory storage with persistence.
 package redis
 
 import (
@@ -12,21 +15,27 @@ import (
 	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
 )
 
+// Constants for Redis key prefixes to avoid collisions and organize data
 const (
-	refreshTokenKeyPrefix = "auth:refresh_token:"
-	userTokensKeyPrefix   = "auth:user_tokens:"
+	refreshTokenKeyPrefix = "auth:refresh_token:" // Prefix for individual token storage
+	userTokensKeyPrefix   = "auth:user_tokens:"   // Prefix for user's token collection
 )
 
+// authRepository implements the auth.Repository interface using Redis for storage.
 type authRepository struct {
 	client *redis.Client
 }
 
 // NewAuthRepository creates a Redis-based authentication repository.
+// It implements the auth.Repository interface for refresh token management.
 func NewAuthRepository(client *redis.Client) auth.Repository {
 	return &authRepository{client: client}
 }
 
 // SaveRefreshToken stores a new refresh token in Redis.
+// It creates two entries:
+// 1. The token itself with the token ID as key
+// 2. An entry in the user's token set to track all tokens for a user
 func (r *authRepository) SaveRefreshToken(ctx context.Context, token *auth.RefreshToken) error {
 	// Serialize the refresh token data to JSON
 	tokenData, err := json.Marshal(token)
@@ -34,7 +43,7 @@ func (r *authRepository) SaveRefreshToken(ctx context.Context, token *auth.Refre
 		return errors.Internal("failed to marshal refresh token")
 	}
 
-	// Create a pipeline
+	// Create a pipeline for atomic operations
 	pipe := r.client.Pipeline()
 
 	// Store token by token ID
@@ -56,6 +65,7 @@ func (r *authRepository) SaveRefreshToken(ctx context.Context, token *auth.Refre
 }
 
 // FindRefreshToken looks up a refresh token by ID.
+// Returns nil if the token doesn't exist.
 func (r *authRepository) FindRefreshToken(ctx context.Context, tokenID string) (*auth.RefreshToken, error) {
 	tokenKey := refreshTokenKeyPrefix + tokenID
 	data, err := r.client.Get(ctx, tokenKey).Result()
@@ -75,7 +85,9 @@ func (r *authRepository) FindRefreshToken(ctx context.Context, tokenID string) (
 }
 
 // FindRefreshTokenByToken looks up a refresh token by its hashed token value.
-func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, refreshToken string) (*auth.RefreshToken, error) {
+// This is a more expensive operation as it requires scanning all tokens.
+// Returns nil if the token doesn't exist.
+func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, hashedToken string) (*auth.RefreshToken, error) {
 	// Scan all token keys
 	var cursor uint64
 	var keys []string
@@ -100,7 +112,7 @@ func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, refreshTok
 			}
 
 			// Verify the token using hash compare
-			if hash.CompareHashAndPassword(token.Token, refreshToken) == nil {
+			if hash.CompareHashAndPassword(token.Token, hashedToken) == nil {
 				return &token, nil
 			}
 		}

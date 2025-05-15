@@ -1,22 +1,30 @@
+// Package postgres provides PostgreSQL implementations of the application's repositories.
 package postgres
 
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/lib/pq"
 	"github.com/verigate/verigate-server/internal/app/client"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 )
 
+// clientRepository implements the client.Repository interface using PostgreSQL.
 type clientRepository struct {
 	db *sql.DB
 }
 
+// NewClientRepository creates a new PostgreSQL-based client repository.
+// It takes a database connection and returns a client.Repository interface.
 func NewClientRepository(db *sql.DB) client.Repository {
 	return &clientRepository{db: db}
 }
 
+// Save creates a new OAuth client in the PostgreSQL database.
+// It inserts all client fields and returns the generated ID.
+// Returns an error if the insertion fails, for example due to a duplicate client ID.
 func (r *clientRepository) Save(ctx context.Context, client *client.Client) error {
 	query := `
 		INSERT INTO clients (
@@ -55,12 +63,19 @@ func (r *clientRepository) Save(ctx context.Context, client *client.Client) erro
 	).Scan(&client.ID)
 
 	if err != nil {
-		return errors.Internal("Failed to create client")
+		// Check for specific database errors like unique constraint violations
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code.Name() == "unique_violation" {
+			return errors.Conflict("Client with this client_id already exists")
+		}
+		return errors.Internal("Failed to create client: " + err.Error())
 	}
 
 	return nil
 }
 
+// Update modifies an existing OAuth client in the PostgreSQL database.
+// It updates all mutable fields of the client identified by its ID.
+// Returns NotFound error if the client doesn't exist, or Internal error if the update fails.
 func (r *clientRepository) Update(ctx context.Context, client *client.Client) error {
 	query := `
 		UPDATE clients SET
@@ -93,21 +108,23 @@ func (r *clientRepository) Update(ctx context.Context, client *client.Client) er
 	)
 
 	if err != nil {
-		return errors.Internal("Failed to update client")
+		return errors.Internal("Failed to update client: " + err.Error())
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows")
+		return errors.Internal("Failed to get affected rows: " + err.Error())
 	}
 
 	if rows == 0 {
-		return errors.NotFound("Client not found")
+		return errors.NotFound(fmt.Sprintf("Client with ID %d not found", client.ID))
 	}
 
 	return nil
 }
 
+// FindByID retrieves an OAuth client from the PostgreSQL database by its internal ID.
+// Returns the client if found, nil if the client doesn't exist, or an error if the query fails.
 func (r *clientRepository) FindByID(ctx context.Context, id uint) (*client.Client, error) {
 	var c client.Client
 	query := `
@@ -148,12 +165,14 @@ func (r *clientRepository) FindByID(ctx context.Context, id uint) (*client.Clien
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to get client")
+		return nil, errors.Internal("Failed to get client by ID: " + err.Error())
 	}
 
 	return &c, nil
 }
 
+// FindByClientID retrieves an OAuth client from the PostgreSQL database by its client ID (public identifier).
+// Returns the client if found, nil if the client doesn't exist, or an error if the query fails.
 func (r *clientRepository) FindByClientID(ctx context.Context, clientID string) (*client.Client, error) {
 	var c client.Client
 	query := `
@@ -194,12 +213,15 @@ func (r *clientRepository) FindByClientID(ctx context.Context, clientID string) 
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to get client by client_id")
+		return nil, errors.Internal("Failed to get client by client_id: " + err.Error())
 	}
 
 	return &c, nil
 }
 
+// FindByOwnerID retrieves a paginated list of OAuth clients owned by a specific user.
+// It returns the clients, total count of clients owned by the user, and any error that occurred.
+// The page parameter is 1-indexed (first page is 1, not 0).
 func (r *clientRepository) FindByOwnerID(ctx context.Context, ownerID uint, page, limit int) ([]client.Client, int64, error) {
 	offset := (page - 1) * limit
 
@@ -207,7 +229,7 @@ func (r *clientRepository) FindByOwnerID(ctx context.Context, ownerID uint, page
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM clients WHERE owner_id = $1"
 	if err := r.db.QueryRowContext(ctx, countQuery, ownerID).Scan(&total); err != nil {
-		return nil, 0, errors.Internal("Failed to count clients")
+		return nil, 0, errors.Internal("Failed to count clients: " + err.Error())
 	}
 
 	// Get clients with pagination
@@ -224,7 +246,7 @@ func (r *clientRepository) FindByOwnerID(ctx context.Context, ownerID uint, page
 
 	rows, err := r.db.QueryContext(ctx, query, ownerID, limit, offset)
 	if err != nil {
-		return nil, 0, errors.Internal("Failed to get clients")
+		return nil, 0, errors.Internal("Failed to retrieve clients by owner ID: " + err.Error())
 	}
 	defer rows.Close()
 
@@ -256,38 +278,43 @@ func (r *clientRepository) FindByOwnerID(ctx context.Context, ownerID uint, page
 			&c.UpdatedAt,
 			&c.OwnerID,
 		); err != nil {
-			return nil, 0, errors.Internal("Failed to scan client")
+			return nil, 0, errors.Internal("Failed to scan client data: " + err.Error())
 		}
 		clients = append(clients, c)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, errors.Internal("Error iterating clients")
+		return nil, 0, errors.Internal("Error iterating client results: " + err.Error())
 	}
 
 	return clients, total, nil
 }
 
+// Delete removes an OAuth client from the PostgreSQL database by its ID.
+// Returns NotFound error if the client doesn't exist, or Internal error if the deletion fails.
 func (r *clientRepository) Delete(ctx context.Context, id uint) error {
 	query := "DELETE FROM clients WHERE id = $1"
 
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
-		return errors.Internal("Failed to delete client")
+		return errors.Internal("Failed to delete client: " + err.Error())
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows")
+		return errors.Internal("Failed to get affected rows after deletion: " + err.Error())
 	}
 
 	if rows == 0 {
-		return errors.NotFound("Client not found")
+		return errors.NotFound(fmt.Sprintf("Client with ID %d not found", id))
 	}
 
 	return nil
 }
 
+// UpdateStatus changes the active status of an OAuth client in the PostgreSQL database.
+// This allows enabling or disabling a client without deleting it.
+// Returns NotFound error if the client doesn't exist, or Internal error if the update fails.
 func (r *clientRepository) UpdateStatus(ctx context.Context, id uint, isActive bool) error {
 	query := `
 		UPDATE clients
@@ -297,16 +324,16 @@ func (r *clientRepository) UpdateStatus(ctx context.Context, id uint, isActive b
 
 	result, err := r.db.ExecContext(ctx, query, id, isActive)
 	if err != nil {
-		return errors.Internal("Failed to update client status")
+		return errors.Internal("Failed to update client status: " + err.Error())
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows")
+		return errors.Internal("Failed to get affected rows after status update: " + err.Error())
 	}
 
 	if rows == 0 {
-		return errors.NotFound("Client not found")
+		return errors.NotFound(fmt.Sprintf("Client with ID %d not found", id))
 	}
 
 	return nil

@@ -1,22 +1,30 @@
+// Package postgres provides PostgreSQL implementations of the application's repositories.
 package postgres
 
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/verigate/verigate-server/internal/app/oauth"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 )
 
+// oauthRepository implements the oauth.Repository interface using PostgreSQL.
 type oauthRepository struct {
 	db *sql.DB
 }
 
+// NewOAuthRepository creates a new PostgreSQL-based OAuth repository.
+// It takes a database connection and returns an oauth.Repository interface.
 func NewOAuthRepository(db *sql.DB) oauth.Repository {
 	return &oauthRepository{db: db}
 }
 
+// SaveAuthorizationCode persists a new OAuth authorization code in the PostgreSQL database.
+// It inserts all code fields and returns the generated ID.
+// This is used during the authorization code OAuth flow.
 func (r *oauthRepository) SaveAuthorizationCode(ctx context.Context, code *oauth.AuthorizationCode) error {
 	query := `
 		INSERT INTO authorization_codes (
@@ -40,12 +48,16 @@ func (r *oauthRepository) SaveAuthorizationCode(ctx context.Context, code *oauth
 	).Scan(&code.ID)
 
 	if err != nil {
-		return errors.Internal("Failed to save authorization code")
+		return errors.Internal(fmt.Sprintf("Failed to save authorization code: %s", err.Error()))
 	}
 
 	return nil
 }
 
+// FindAuthorizationCode retrieves an authorization code from the database by its value.
+// Returns the code object if found, nil if the code doesn't exist,
+// or an error if the query fails.
+// This is used during the token exchange step of the OAuth flow.
 func (r *oauthRepository) FindAuthorizationCode(ctx context.Context, code string) (*oauth.AuthorizationCode, error) {
 	var ac oauth.AuthorizationCode
 	query := `
@@ -73,12 +85,16 @@ func (r *oauthRepository) FindAuthorizationCode(ctx context.Context, code string
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to find authorization code")
+		return nil, errors.Internal(fmt.Sprintf("Failed to find authorization code: %s", err.Error()))
 	}
 
 	return &ac, nil
 }
 
+// MarkCodeAsUsed updates an authorization code to mark it as used.
+// Authorization codes are one-time use only, and this method is called
+// after a code has been successfully exchanged for a token.
+// Returns an error if the update fails.
 func (r *oauthRepository) MarkCodeAsUsed(ctx context.Context, code string) error {
 	query := `
 		UPDATE authorization_codes
@@ -139,6 +155,9 @@ func (r *oauthRepository) SaveUserConsent(ctx context.Context, consent *oauth.Us
 	return nil
 }
 
+// FindUserConsent retrieves a user's consent record for a specific client.
+// User consents store the permissions (scopes) that a user has granted to a client application.
+// Returns the consent if found, nil if no consent exists, or an error if the query fails.
 func (r *oauthRepository) FindUserConsent(ctx context.Context, userID uint, clientID string) (*oauth.UserConsent, error) {
 	var uc oauth.UserConsent
 	query := `
@@ -160,12 +179,15 @@ func (r *oauthRepository) FindUserConsent(ctx context.Context, userID uint, clie
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to find user consent")
+		return nil, errors.Internal(fmt.Sprintf("Failed to find user consent: %s", err.Error()))
 	}
 
 	return &uc, nil
 }
 
+// UpdateUserConsent modifies an existing user consent record.
+// This is typically called when a user grants additional permissions to a client.
+// Returns NotFound error if no consent exists, or Internal error if the update fails.
 func (r *oauthRepository) UpdateUserConsent(ctx context.Context, consent *oauth.UserConsent) error {
 	query := `
 		UPDATE user_consents
@@ -181,21 +203,24 @@ func (r *oauthRepository) UpdateUserConsent(ctx context.Context, consent *oauth.
 	)
 
 	if err != nil {
-		return errors.Internal("Failed to update user consent")
+		return errors.Internal(fmt.Sprintf("Failed to update user consent: %s", err.Error()))
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows")
+		return errors.Internal(fmt.Sprintf("Failed to get affected rows: %s", err.Error()))
 	}
 
 	if rows == 0 {
-		return errors.NotFound("User consent not found")
+		return errors.NotFound(fmt.Sprintf("User consent not found for user ID %d and client ID %s", consent.UserID, consent.ClientID))
 	}
 
 	return nil
 }
 
+// DeleteUserConsent removes a user's consent for a specific client.
+// This is typically called when a user revokes permissions from a client application.
+// Returns NotFound error if no consent exists, or Internal error if the deletion fails.
 func (r *oauthRepository) DeleteUserConsent(ctx context.Context, userID uint, clientID string) error {
 	query := `
 		DELETE FROM user_consents
@@ -204,16 +229,16 @@ func (r *oauthRepository) DeleteUserConsent(ctx context.Context, userID uint, cl
 
 	result, err := r.db.ExecContext(ctx, query, userID, clientID)
 	if err != nil {
-		return errors.Internal("Failed to delete user consent")
+		return errors.Internal(fmt.Sprintf("Failed to delete user consent: %s", err.Error()))
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows")
+		return errors.Internal(fmt.Sprintf("Failed to get affected rows: %s", err.Error()))
 	}
 
 	if rows == 0 {
-		return errors.NotFound("User consent not found")
+		return errors.NotFound(fmt.Sprintf("User consent not found for user ID %d and client ID %s", userID, clientID))
 	}
 
 	return nil

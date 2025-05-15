@@ -1,3 +1,5 @@
+// Package token provides functionality for OAuth token management,
+// including access tokens and refresh tokens.
 package token
 
 import (
@@ -16,12 +18,20 @@ import (
 	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
 )
 
+// CacheRepository defines the interface for token caching operations.
 type CacheRepository interface {
+	// Set stores a value in the cache with the specified expiration
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+
+	// Get retrieves a value from the cache
 	Get(ctx context.Context, key string) (string, error)
+
+	// Delete removes a value from the cache
 	Delete(ctx context.Context, key string) error
 }
 
+// Service handles token-related operations including creation, validation,
+// and revocation of access and refresh tokens.
 type Service struct {
 	tokenRepo     Repository
 	cacheRepo     CacheRepository
@@ -32,6 +42,7 @@ type Service struct {
 	refreshExpiry time.Duration
 }
 
+// NewService creates a new token service instance with the necessary dependencies.
 func NewService(tokenRepo Repository, cacheRepo CacheRepository, authService *auth.Service) *Service {
 	// Parse JWT keys
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.AppConfig.JWTPrivateKey))
@@ -66,6 +77,8 @@ func NewService(tokenRepo Repository, cacheRepo CacheRepository, authService *au
 	}
 }
 
+// CreateTokens generates new access and refresh tokens for a user.
+// It stores the tokens in the database and returns them to the client.
 func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope, authCode string) (*TokenCreateResponse, error) {
 	// Generate access token
 	accessToken, accessTokenID, err := s.createAccessToken(userID, clientID, scope)
@@ -136,6 +149,9 @@ func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope
 	}, nil
 }
 
+// RefreshTokens exchanges a valid refresh token for a new access token and refresh token pair.
+// It validates the refresh token, checks scope restrictions, and revokes the old tokens
+// before generating new ones.
 func (s *Service) RefreshTokens(ctx context.Context, refreshToken, clientID, requestedScope string) (*TokenCreateResponse, error) {
 	// Hash the refresh token
 	tokenHash, err := hash.HashPassword(refreshToken)
@@ -186,6 +202,8 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken, clientID, req
 	return s.CreateTokens(ctx, token.UserID, token.ClientID, scope, "")
 }
 
+// RevokeAccessToken invalidates an access token if it belongs to the specified client.
+// It removes the token from the cache and marks it as revoked in the database.
 func (s *Service) RevokeAccessToken(ctx context.Context, tokenValue, clientID string) error {
 	// Parse JWT to get token ID
 	tokenID, err := s.getTokenIDFromJWT(tokenValue)
@@ -214,6 +232,8 @@ func (s *Service) RevokeAccessToken(ctx context.Context, tokenValue, clientID st
 	return nil
 }
 
+// RevokeRefreshToken invalidates a refresh token and its associated access token
+// if they belong to the specified client.
 func (s *Service) RevokeRefreshToken(ctx context.Context, tokenValue, clientID string) error {
 	// Hash the refresh token
 	tokenHash, err := hash.HashPassword(tokenValue)
@@ -244,6 +264,8 @@ func (s *Service) RevokeRefreshToken(ctx context.Context, tokenValue, clientID s
 	return nil
 }
 
+// ValidateAccessToken verifies the signature and validity of an access token.
+// It checks if the token has been revoked and returns the claims if the token is valid.
 func (s *Service) ValidateAccessToken(ctx context.Context, tokenValue string) (*jwt.MapClaims, error) {
 	// Parse and validate JWT
 	token, err := jwt.Parse(tokenValue, func(token *jwt.Token) (interface{}, error) {
@@ -290,6 +312,7 @@ func (s *Service) ValidateAccessToken(ctx context.Context, tokenValue string) (*
 	return &claims, nil
 }
 
+// ListTokens retrieves a paginated list of access tokens for a specific user.
 func (s *Service) ListTokens(ctx context.Context, userID uint, page, limit int) (*TokenListResponse, error) {
 	accessTokens, totalAccess, err := s.tokenRepo.FindAccessTokensByUserID(ctx, userID, page, limit)
 	if err != nil {
@@ -317,6 +340,7 @@ func (s *Service) ListTokens(ctx context.Context, userID uint, page, limit int) 
 	}, nil
 }
 
+// RevokeToken invalidates an access token if it belongs to the specified user.
 func (s *Service) RevokeToken(ctx context.Context, tokenID string, userID uint) error {
 	token, err := s.tokenRepo.FindAccessToken(ctx, tokenID)
 	if err != nil {
@@ -334,12 +358,12 @@ func (s *Service) RevokeToken(ctx context.Context, tokenID string, userID uint) 
 	return s.tokenRepo.RevokeAccessToken(ctx, tokenID)
 }
 
+// RevokeTokensByAuthCode invalidates all access tokens associated with a specific authorization code.
 func (s *Service) RevokeTokensByAuthCode(ctx context.Context, authCode string) error {
 	return s.tokenRepo.RevokeAccessTokensByAuthCode(ctx, authCode)
 }
 
-// Helper methods
-
+// createAccessToken generates a new JWT access token with the specified claims.
 func (s *Service) createAccessToken(userID uint, clientID, scope string) (string, string, error) {
 	tokenID := uuid.New().String()
 	now := time.Now()
@@ -363,6 +387,7 @@ func (s *Service) createAccessToken(userID uint, clientID, scope string) (string
 	return signedToken, tokenID, nil
 }
 
+// createRefreshToken generates a new secure random refresh token.
 func (s *Service) createRefreshToken() (string, string, error) {
 	tokenID := uuid.New().String()
 
@@ -375,6 +400,7 @@ func (s *Service) createRefreshToken() (string, string, error) {
 	return refreshToken, tokenID, nil
 }
 
+// getTokenIDFromJWT extracts the token ID (jti) claim from a JWT without validating the signature.
 func (s *Service) getTokenIDFromJWT(tokenValue string) (string, error) {
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenValue, jwt.MapClaims{})
 	if err != nil {
@@ -394,6 +420,7 @@ func (s *Service) getTokenIDFromJWT(tokenValue string) (string, error) {
 	return tokenID, nil
 }
 
+// isScopeSubset checks if the requested scope is a subset of the existing scope.
 func (s *Service) isScopeSubset(requested, existing string) bool {
 	requestedScopes := strings.Split(requested, " ")
 	existingScopes := strings.Split(existing, " ")

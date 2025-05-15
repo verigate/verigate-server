@@ -1,3 +1,5 @@
+// Package user provides functionality for user account management including
+// registration, authentication, profile management, and session handling.
 package user
 
 import (
@@ -9,11 +11,15 @@ import (
 	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
 )
 
+// Service handles user-related business logic including registration,
+// authentication, profile management, and account operations.
 type Service struct {
 	repo        Repository
 	authService *auth.Service
 }
 
+// NewService creates a new user service instance with the necessary dependencies.
+// It requires a user repository for data access and an auth service for token operations.
 func NewService(repo Repository, authService *auth.Service) *Service {
 	return &Service{
 		repo:        repo,

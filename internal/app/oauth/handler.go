@@ -1,3 +1,5 @@
+// Package oauth provides functionality for implementing OAuth 2.0 authorization flows,
+// including authorization code, implicit, password, and client credentials.
 package oauth
 
 import (
@@ -11,14 +13,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Handler manages HTTP requests related to OAuth authorization flows.
+// It handles authorization, token issuance, revocation, and user information endpoints.
 type Handler struct {
 	service *Service
 }
 
+// NewHandler creates a new OAuth handler instance.
+// It initializes the handler with the provided service for OAuth operations.
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+// RegisterRoutes sets up the OAuth-related routes on the provided router group.
+// Routes are organized into three categories:
+// - Public endpoints: Token issuance and revocation
+// - OAuth protected endpoints: Require OAuth token authorization
+// - Web app protected endpoints: Require web authentication for consent screens
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	// Public endpoints
 	r.POST("/token", h.Token)
@@ -41,6 +52,10 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	}
 }
 
+// Authorize handles the OAuth authorization request.
+// This is the entry point for the OAuth authorization code flow.
+// It validates the request, checks if user consent is needed,
+// and either issues an authorization code or redirects to the consent page.
 func (h *Handler) Authorize(c *gin.Context) {
 	var req AuthorizeRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -69,6 +84,10 @@ func (h *Handler) Authorize(c *gin.Context) {
 	c.Redirect(http.StatusFound, redirectURL)
 }
 
+// Token handles the OAuth token issuance endpoint.
+// This endpoint supports various grant types including authorization_code,
+// refresh_token, client_credentials, and password grants.
+// It validates the client credentials and issues access and refresh tokens.
 func (h *Handler) Token(c *gin.Context) {
 	var req TokenRequest
 	if err := c.ShouldBind(&req); err != nil {
@@ -133,6 +152,10 @@ func (h *Handler) Token(c *gin.Context) {
 	c.JSON(http.StatusOK, token)
 }
 
+// Revoke handles token revocation as specified in RFC 7009.
+// It allows clients to notify the authorization server that a
+// previously obtained refresh or access token is no longer needed.
+// This endpoint always returns success even if the token was not found.
 func (h *Handler) Revoke(c *gin.Context) {
 	var req RevokeRequest
 	if err := c.ShouldBind(&req); err != nil {
@@ -160,6 +183,10 @@ func (h *Handler) Revoke(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// UserInfo implements the OpenID Connect UserInfo endpoint.
+// It returns claims about the authenticated user based on the scope
+// of the access token used to access this endpoint.
+// The endpoint is OAuth 2.0 protected and requires a valid access token.
 func (h *Handler) UserInfo(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -172,6 +199,14 @@ func (h *Handler) UserInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, userInfo)
 }
 
+// ShowConsent displays the OAuth consent page to the user.
+// This page shows the application name, requested scopes, and allows the user
+// to approve or deny the authorization request.
+// In a production environment, this would typically render an HTML template.
+// ShowConsent displays the consent page to the user.
+// This page presents information about the client application requesting access
+// and the specific permissions (scopes) being requested.
+// The user can then approve or deny these permission requests.
 func (h *Handler) ShowConsent(c *gin.Context) {
 	clientID := c.Query("client_id")
 	scope := c.Query("scope")
@@ -186,6 +221,9 @@ func (h *Handler) ShowConsent(c *gin.Context) {
 	c.JSON(http.StatusOK, data)
 }
 
+// HandleConsent processes the user's consent decision for an OAuth authorization request.
+// It receives the user's approval or rejection of the requested permissions
+// and either proceeds with the authorization flow or returns an access_denied error.
 func (h *Handler) HandleConsent(c *gin.Context) {
 	type ConsentRequest struct {
 		ClientID string `json:"client_id" binding:"required"`
@@ -239,6 +277,10 @@ func (h *Handler) HandleConsent(c *gin.Context) {
 
 // Helper methods
 
+// getClientCredentials extracts client credentials from the request.
+// It first tries to get credentials from the Authorization header using HTTP Basic auth,
+// and falls back to form parameters if not found in the header.
+// Returns the client ID, client secret (may be empty for public clients), and any error that occurred.
 func (h *Handler) getClientCredentials(c *gin.Context, req TokenRequest) (string, string, error) {
 	// Try Authorization header first
 	authHeader := c.GetHeader("Authorization")
@@ -274,6 +316,9 @@ func (h *Handler) getClientCredentials(c *gin.Context, req TokenRequest) (string
 	return clientID, clientSecret, nil
 }
 
+// buildRedirectURL constructs the OAuth callback URL with authorization code and state parameters.
+// It handles adding the appropriate query string separator (? or &) depending on whether
+// the redirect URI already contains query parameters.
 func (h *Handler) buildRedirectURL(redirectURI, code, state string) string {
 	separator := "?"
 	if strings.Contains(redirectURI, "?") {
@@ -288,6 +333,8 @@ func (h *Handler) buildRedirectURL(redirectURI, code, state string) string {
 	return result
 }
 
+// buildErrorRedirect constructs an OAuth error redirect URL according to the OAuth 2.0 specification.
+// It includes the error code, error description (with spaces replaced by '+'), and preserves the state parameter.
 func (h *Handler) buildErrorRedirect(redirectURI, state, errorCode, errorDesc string) string {
 	separator := "?"
 	if strings.Contains(redirectURI, "?") {
@@ -305,6 +352,9 @@ func (h *Handler) buildErrorRedirect(redirectURI, state, errorCode, errorDesc st
 	return result
 }
 
+// redirectError handles OAuth error responses according to the OAuth 2.0 specification.
+// If a valid redirect URI is provided, it redirects the client with error parameters in the query string.
+// If no redirect URI is available, it returns a JSON error response directly.
 func (h *Handler) redirectError(c *gin.Context, redirectURI, state, errorCode, errorDesc string) {
 	if redirectURI == "" {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -317,6 +367,10 @@ func (h *Handler) redirectError(c *gin.Context, redirectURI, state, errorCode, e
 	c.Redirect(http.StatusFound, h.buildErrorRedirect(redirectURI, state, errorCode, errorDesc))
 }
 
+// buildConsentURL constructs the URL for the consent page, preserving all the
+// parameters from the original authorization request to use after consent.
+// This ensures the OAuth flow can continue with the same parameters once
+// the user has provided their consent decision.
 func (h *Handler) buildConsentURL(req AuthorizeRequest) string {
 	params := []string{
 		"client_id=" + req.ClientID,

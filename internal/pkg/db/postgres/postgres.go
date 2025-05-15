@@ -1,3 +1,5 @@
+// Package postgres provides PostgreSQL database connection and repository implementations
+// for the Verigate Server application.
 package postgres
 
 import (
@@ -12,6 +14,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// NewConnection establishes a new PostgreSQL database connection using configuration settings.
+// It connects to the database, validates the connection with a ping, and runs any pending migrations.
+// Returns the database connection pool or an error if the connection or migrations fail.
 func NewConnection() (*sql.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		config.AppConfig.PostgresHost,
@@ -37,6 +42,9 @@ func NewConnection() (*sql.DB, error) {
 	return db, nil
 }
 
+// runMigrations applies any pending database migrations to ensure
+// the database schema is up to date with the expected structure.
+// It uses the golang-migrate library to track and apply migrations.
 func runMigrations(db *sql.DB) error {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
