@@ -24,7 +24,7 @@ import (
 func WebAuth(authService *auth.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract Authorization header
-		authHeader := c.GetHeader("Authorization")
+		authHeader := c.GetHeader(AuthHeaderName)
 		if authHeader == "" {
 			c.Error(errors.Unauthorized("Missing authorization header"))
 			c.Abort()
@@ -33,7 +33,7 @@ func WebAuth(authService *auth.Service) gin.HandlerFunc {
 
 		// Validate Bearer token format
 		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		if len(parts) != 2 || parts[0] != AuthHeaderPrefix {
 			c.Error(errors.Unauthorized("Invalid authorization header format"))
 			c.Abort()
 			return

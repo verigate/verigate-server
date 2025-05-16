@@ -10,6 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	// AuthHeaderName is the HTTP header name for authorization
+	AuthHeaderName = "Authorization"
+
+	// AuthHeaderPrefix is the prefix for bearer token authorization scheme
+	AuthHeaderPrefix = "Bearer"
+)
+
 // Auth is an authentication middleware for OAuth APIs.
 // This middleware validates JWT tokens issued through the OAuth 2.0 flow
 // and is primarily used for securing the OAuth API endpoints.
@@ -24,7 +32,7 @@ import (
 func Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract Authorization header
-		authHeader := c.GetHeader("Authorization")
+		authHeader := c.GetHeader(AuthHeaderName)
 		if authHeader == "" {
 			c.Error(errors.Unauthorized("Missing authorization header"))
 			c.Abort()
@@ -33,7 +41,7 @@ func Auth() gin.HandlerFunc {
 
 		// Validate Bearer token format
 		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		if len(parts) != 2 || parts[0] != AuthHeaderPrefix {
 			c.Error(errors.Unauthorized("Invalid authorization header format"))
 			c.Abort()
 			return
