@@ -16,6 +16,12 @@ import (
 	"github.com/verigate/verigate-server/internal/pkg/config"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
+	jwtutil "github.com/verigate/verigate-server/internal/pkg/utils/jwt"
+)
+
+// Constants
+const (
+	TokenTypeBearer = "Bearer" // Bearer token type for Authorization header
 )
 
 // CacheRepository defines the interface for token caching operations.
@@ -142,7 +148,7 @@ func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope
 
 	return &TokenCreateResponse{
 		AccessToken:  accessToken,
-		TokenType:    "Bearer",
+		TokenType:    TokenTypeBearer,
 		ExpiresIn:    int(s.accessExpiry.Seconds()),
 		RefreshToken: refreshToken,
 		Scope:        scope,
@@ -267,11 +273,15 @@ func (s *Service) RevokeRefreshToken(ctx context.Context, tokenValue, clientID s
 // ValidateAccessToken verifies the signature and validity of an access token.
 // It checks if the token has been revoked and returns the claims if the token is valid.
 func (s *Service) ValidateAccessToken(ctx context.Context, tokenValue string) (*jwt.MapClaims, error) {
-	// Parse and validate JWT
+	// Use the jwtutil.ValidateTokenForRevocation function to validate the token format
+	// and extract the token ID
+	tokenID, err := jwtutil.ValidateTokenForRevocation(tokenValue)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the token to get claims for additional checks and return value
 	token, err := jwt.Parse(tokenValue, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, errors.Unauthorized("unexpected signing method")
-		}
 		return s.publicKey, nil
 	})
 
@@ -279,19 +289,9 @@ func (s *Service) ValidateAccessToken(ctx context.Context, tokenValue string) (*
 		return nil, errors.Unauthorized("invalid token")
 	}
 
-	if !token.Valid {
-		return nil, errors.Unauthorized("invalid token")
-	}
-
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, errors.Unauthorized("invalid token claims")
-	}
-
-	// Check if token is revoked
-	tokenID, ok := claims["jti"].(string)
-	if !ok {
-		return nil, errors.Unauthorized("invalid token ID")
 	}
 
 	// Check cache first
@@ -375,7 +375,8 @@ func (s *Service) createAccessToken(userID uint, clientID, scope string) (string
 		"scope": scope,
 		"iat":   now.Unix(),
 		"exp":   now.Add(s.accessExpiry).Unix(),
-		"iss":   "oauth-server",
+		"iss":   jwtutil.TokenIssuer,
+		"type":  jwtutil.TokenTypeAccess,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)

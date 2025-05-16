@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
-	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -16,6 +15,7 @@ import (
 	"github.com/verigate/verigate-server/internal/pkg/config"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
+	jwtutil "github.com/verigate/verigate-server/internal/pkg/utils/jwt"
 )
 
 // Service handles authentication-related business logic.
@@ -82,7 +82,7 @@ func (s *Service) CreateTokenPair(ctx context.Context, userID uint, userAgent, i
 		"iat":  now.Unix(),
 		"exp":  accessExpiry.Unix(),
 		"iss":  s.accessTokenIssuer,
-		"type": "access",
+		"type": jwtutil.TokenTypeAccess,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
@@ -166,47 +166,8 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken, userAgent, ip
 // ValidateAccessToken validates an access token and returns the user ID.
 // It checks the token's signature, expiration, issuer, and type.
 func (s *Service) ValidateAccessToken(tokenString string) (uint, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Validate the signing method
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return s.publicKey, nil
-	})
-
-	if err != nil {
-		return 0, errors.Unauthorized("invalid token: " + err.Error())
-	}
-
-	if !token.Valid {
-		return 0, errors.Unauthorized("invalid token")
-	}
-
-	// Extract claims
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return 0, errors.Unauthorized("invalid token claims")
-	}
-
-	// Check token type
-	tokenType, ok := claims["type"].(string)
-	if !ok || tokenType != "access" {
-		return 0, errors.Unauthorized("invalid token type")
-	}
-
-	// Check issuer
-	issuer, ok := claims["iss"].(string)
-	if !ok || issuer != s.accessTokenIssuer {
-		return 0, errors.Unauthorized("invalid token issuer")
-	}
-
-	// Extract user ID
-	userIDFloat, ok := claims["sub"].(float64)
-	if !ok {
-		return 0, errors.Unauthorized("invalid user ID in token")
-	}
-
-	return uint(userIDFloat), nil
+	// Use the common JWT utility for consistent token validation
+	return jwtutil.ValidateAccessTokenWithClaims(tokenString, s.accessTokenIssuer)
 }
 
 // RevokeRefreshToken revokes a specific refresh token.
