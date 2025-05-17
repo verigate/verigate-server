@@ -2,8 +2,6 @@
 package middleware
 
 import (
-	"strings"
-
 	"github.com/verigate/verigate-server/internal/app/auth"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 
@@ -23,32 +21,22 @@ import (
 // If authentication fails, the middleware aborts the request with an appropriate error.
 func WebAuth(authService *auth.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Extract Authorization header
-		authHeader := c.GetHeader(AuthHeaderName)
-		if authHeader == "" {
-			c.Error(errors.Unauthorized("Missing authorization header"))
-			c.Abort()
-			return
-		}
-
-		// Validate Bearer token format
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != AuthHeaderPrefix {
-			c.Error(errors.Unauthorized("Invalid authorization header format"))
-			c.Abort()
-			return
+		// Extract bearer token from Authorization header
+		tokenString, ok := extractBearerToken(c)
+		if !ok {
+			return // Error already handled in the function
 		}
 
 		// Validate token and extract user ID
-		userID, err := authService.ValidateAccessToken(parts[1])
+		userID, err := authService.ValidateAccessToken(tokenString)
 		if err != nil {
-			c.Error(errors.Unauthorized("Invalid token"))
+			c.Error(errors.Unauthorized(ErrMsgInvalidToken))
 			c.Abort()
 			return
 		}
 
 		// Store user ID in context for downstream handlers
-		c.Set("user_id", userID)
+		c.Set(ContextKeyUserID, userID)
 
 		c.Next()
 	}
