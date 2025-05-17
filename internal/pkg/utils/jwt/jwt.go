@@ -17,6 +17,16 @@ const (
 	TokenTypeAccess  = "access"       // Access tokens used for API authorization
 	TokenTypeRefresh = "refresh"      // Refresh tokens used to obtain new access tokens
 	TokenIssuer      = "oauth-server" // Issuer value for all JWT tokens
+
+	// JWT claim key constants
+	ClaimKeyJTI   = "jti"   // JWT ID claim
+	ClaimKeySub   = "sub"   // Subject claim (user ID)
+	ClaimKeyAud   = "aud"   // Audience claim (client ID)
+	ClaimKeyScope = "scope" // Scope claim
+	ClaimKeyIAT   = "iat"   // Issued At claim
+	ClaimKeyEXP   = "exp"   // Expiration claim
+	ClaimKeyISS   = "iss"   // Issuer claim
+	ClaimKeyType  = "type"  // Token type claim
 )
 
 // Claims represents the custom claims structure for JWT tokens.

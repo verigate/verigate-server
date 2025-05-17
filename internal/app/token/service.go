@@ -22,6 +22,9 @@ import (
 // Constants
 const (
 	TokenTypeBearer = "Bearer" // Bearer token type for Authorization header
+
+	// Cache key prefixes
+	CacheKeyAccessToken = "access_token:" // Prefix for access token cache keys
 )
 
 // CacheRepository defines the interface for token caching operations.
@@ -142,7 +145,7 @@ func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope
 	}
 
 	// Cache the access token for quick validation
-	if err := s.cacheRepo.Set(ctx, "access_token:"+accessTokenID, accessTokenModel, s.accessExpiry); err != nil {
+	if err := s.cacheRepo.Set(ctx, CacheKeyAccessToken+accessTokenID, accessTokenModel, s.accessExpiry); err != nil {
 		// Not critical, continue
 	}
 
@@ -233,7 +236,7 @@ func (s *Service) RevokeAccessToken(ctx context.Context, tokenValue, clientID st
 	}
 
 	// Remove from cache
-	s.cacheRepo.Delete(ctx, "access_token:"+tokenID)
+	s.cacheRepo.Delete(ctx, CacheKeyAccessToken+tokenID)
 
 	return nil
 }
@@ -264,7 +267,7 @@ func (s *Service) RevokeRefreshToken(ctx context.Context, tokenValue, clientID s
 
 	if token.AccessTokenID != "" {
 		s.tokenRepo.RevokeAccessToken(ctx, token.AccessTokenID)
-		s.cacheRepo.Delete(ctx, "access_token:"+token.AccessTokenID)
+		s.cacheRepo.Delete(ctx, CacheKeyAccessToken+token.AccessTokenID)
 	}
 
 	return nil
@@ -295,7 +298,7 @@ func (s *Service) ValidateAccessToken(ctx context.Context, tokenValue string) (*
 	}
 
 	// Check cache first
-	if cached, err := s.cacheRepo.Get(ctx, "access_token:"+tokenID); err == nil && cached != "" {
+	if cached, err := s.cacheRepo.Get(ctx, CacheKeyAccessToken+tokenID); err == nil && cached != "" {
 		// Token found in cache, check if revoked
 		// This would need proper deserialization
 	}
@@ -369,14 +372,14 @@ func (s *Service) createAccessToken(userID uint, clientID, scope string) (string
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"jti":   tokenID,
-		"sub":   userID,
-		"aud":   clientID,
-		"scope": scope,
-		"iat":   now.Unix(),
-		"exp":   now.Add(s.accessExpiry).Unix(),
-		"iss":   jwtutil.TokenIssuer,
-		"type":  jwtutil.TokenTypeAccess,
+		jwtutil.ClaimKeyJTI:   tokenID,
+		jwtutil.ClaimKeySub:   userID,
+		jwtutil.ClaimKeyAud:   clientID,
+		jwtutil.ClaimKeyScope: scope,
+		jwtutil.ClaimKeyIAT:   now.Unix(),
+		jwtutil.ClaimKeyEXP:   now.Add(s.accessExpiry).Unix(),
+		jwtutil.ClaimKeyISS:   jwtutil.TokenIssuer,
+		jwtutil.ClaimKeyType:  jwtutil.TokenTypeAccess,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
@@ -413,7 +416,7 @@ func (s *Service) getTokenIDFromJWT(tokenValue string) (string, error) {
 		return "", errors.Unauthorized("invalid token claims")
 	}
 
-	tokenID, ok := claims["jti"].(string)
+	tokenID, ok := claims[jwtutil.ClaimKeyJTI].(string)
 	if !ok {
 		return "", errors.Unauthorized("invalid token ID")
 	}

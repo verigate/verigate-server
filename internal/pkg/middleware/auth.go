@@ -16,6 +16,15 @@ const (
 
 	// AuthHeaderPrefix is the prefix for bearer token authorization scheme
 	AuthHeaderPrefix = "Bearer"
+
+	// Error messages for authentication failures
+	ErrMsgMissingAuthHeader = "Missing authorization header"
+	ErrMsgInvalidAuthFormat = "Invalid authorization header format"
+	ErrMsgInvalidToken      = "Invalid token"
+
+	// Context keys for authentication data
+	ContextKeyUserID = "user_id"
+	ContextKeyClaims = "claims"
 )
 
 // Auth is an authentication middleware for OAuth APIs.
@@ -31,34 +40,47 @@ const (
 // If authentication fails, the middleware aborts the request with an appropriate error.
 func Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Extract Authorization header
-		authHeader := c.GetHeader(AuthHeaderName)
-		if authHeader == "" {
-			c.Error(errors.Unauthorized("Missing authorization header"))
-			c.Abort()
-			return
-		}
-
-		// Validate Bearer token format
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != AuthHeaderPrefix {
-			c.Error(errors.Unauthorized("Invalid authorization header format"))
-			c.Abort()
-			return
+		// Extract bearer token from Authorization header
+		tokenString, ok := extractBearerToken(c)
+		if !ok {
+			return // Error already handled in the function
 		}
 
 		// Validate token and extract claims
-		claims, err := jwt.ValidateToken(parts[1])
+		claims, err := jwt.ValidateToken(tokenString)
 		if err != nil {
-			c.Error(errors.Unauthorized("Invalid token"))
+			c.Error(errors.Unauthorized(ErrMsgInvalidToken))
 			c.Abort()
 			return
 		}
 
 		// Store user ID and claims in context for downstream handlers
-		c.Set("user_id", claims.UserID)
-		c.Set("claims", claims)
+		c.Set(ContextKeyUserID, claims.UserID)
+		c.Set(ContextKeyClaims, claims)
 
 		c.Next()
 	}
+}
+
+// extractBearerToken extracts the bearer token from the Authorization header.
+// It returns the token string and a boolean indicating if extraction was successful.
+// If extraction fails, it aborts the request with an appropriate error.
+func extractBearerToken(c *gin.Context) (string, bool) {
+	// Extract Authorization header
+	authHeader := c.GetHeader(AuthHeaderName)
+	if authHeader == "" {
+		c.Error(errors.Unauthorized(ErrMsgMissingAuthHeader))
+		c.Abort()
+		return "", false
+	}
+
+	// Validate Bearer token format
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != AuthHeaderPrefix {
+		c.Error(errors.Unauthorized(ErrMsgInvalidAuthFormat))
+		c.Abort()
+		return "", false
+	}
+
+	return parts[1], true
 }
