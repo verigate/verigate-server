@@ -77,12 +77,12 @@ func (s *Service) CreateTokenPair(ctx context.Context, userID uint, userAgent, i
 	accessExpiry := now.Add(s.accessExpiry)
 
 	claims := jwt.MapClaims{
-		"jti":  tokenID,
-		"sub":  userID,
-		"iat":  now.Unix(),
-		"exp":  accessExpiry.Unix(),
-		"iss":  s.accessTokenIssuer,
-		"type": jwtutil.TokenTypeAccess,
+		jwtutil.ClaimKeyJTI:  tokenID,
+		jwtutil.ClaimKeySub:  userID,
+		jwtutil.ClaimKeyIAT:  now.Unix(),
+		jwtutil.ClaimKeyEXP:  accessExpiry.Unix(),
+		jwtutil.ClaimKeyISS:  s.accessTokenIssuer,
+		jwtutil.ClaimKeyType: jwtutil.TokenTypeAccess,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
@@ -103,7 +103,7 @@ func (s *Service) CreateTokenPair(ctx context.Context, userID uint, userAgent, i
 	// Hash the refresh token
 	hashedRefreshToken, err := hash.HashPassword(refreshToken)
 	if err != nil {
-		return nil, errors.Internal("failed to hash refresh token")
+		return nil, errors.Internal(errors.ErrMsgFailedToHashRefreshToken)
 	}
 
 	// Store the refresh token

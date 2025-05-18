@@ -8,6 +8,26 @@ import (
 	"net/http"
 )
 
+// Common error message constants to ensure consistency
+const (
+	// Authentication related errors
+	ErrMsgInvalidToken           = "invalid token"
+	ErrMsgInvalidTokenClaims     = "invalid token claims"
+	ErrMsgInvalidTokenID         = "invalid token ID"
+	ErrMsgInvalidTokenFormat     = "invalid token format"
+	ErrMsgTokenRevoked           = "token has been revoked"
+	ErrMsgTokenExpired           = "token has expired"
+	ErrMsgTokenNotFound          = "token not found"
+	ErrMsgRefreshTokenNotFound   = "refresh token not found"
+	ErrMsgAccessTokenNotFound    = "access token not found"
+	
+	// Hash-related errors
+	ErrMsgFailedToHashPassword   = "failed to hash password"
+	ErrMsgFailedToHashToken      = "failed to hash token"
+	ErrMsgFailedToHashAccessToken = "failed to hash access token"
+	ErrMsgFailedToHashRefreshToken = "failed to hash refresh token"
+)
+
 // CustomError represents a structured error with HTTP status code and optional details.
 // It implements the standard error interface and provides additional context for API responses.
 type CustomError struct {

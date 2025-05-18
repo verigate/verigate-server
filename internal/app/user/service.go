@@ -49,7 +49,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*UserRespo
 	// Hash password
 	hashedPassword, err := hash.HashPassword(req.Password)
 	if err != nil {
-		return nil, errors.Internal("Failed to hash password")
+		return nil, errors.Internal(errors.ErrMsgFailedToHashPassword)
 	}
 
 	// Create user
@@ -162,7 +162,7 @@ func (s *Service) ChangePassword(ctx context.Context, id uint, req ChangePasswor
 	// Hash new password
 	hashedPassword, err := hash.HashPassword(req.NewPassword)
 	if err != nil {
-		return errors.Internal("Failed to hash password")
+		return errors.Internal(errors.ErrMsgFailedToHashPassword)
 	}
 
 	return s.repo.UpdatePassword(ctx, id, hashedPassword)
