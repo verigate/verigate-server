@@ -194,18 +194,18 @@ func ValidateTokenForRevocation(tokenString string) (string, error) {
 	})
 
 	if err != nil {
-		return "", errors.Unauthorized("invalid token")
+		return "", errors.Unauthorized(errors.ErrMsgInvalidToken)
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", errors.Unauthorized("invalid token claims")
+		return "", errors.Unauthorized(errors.ErrMsgInvalidTokenClaims)
 	}
 
 	// Check if token is revoked
-	tokenID, ok := claims["jti"].(string)
+	tokenID, ok := claims[ClaimKeyJTI].(string)
 	if !ok {
-		return "", errors.Unauthorized("invalid token ID")
+		return "", errors.Unauthorized(errors.ErrMsgInvalidTokenID)
 	}
 
 	return tokenID, nil

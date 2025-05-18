@@ -104,12 +104,12 @@ func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope
 	// Hash tokens for storage
 	accessTokenHash, err := hash.HashPassword(accessToken)
 	if err != nil {
-		return nil, errors.Internal("failed to hash access token")
+		return nil, errors.Internal(errors.ErrMsgFailedToHashAccessToken)
 	}
 
 	refreshTokenHash, err := hash.HashPassword(refreshToken)
 	if err != nil {
-		return nil, errors.Internal("failed to hash refresh token")
+		return nil, errors.Internal(errors.ErrMsgFailedToHashRefreshToken)
 	}
 
 	// Save tokens
@@ -165,7 +165,7 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken, clientID, req
 	// Hash the refresh token
 	tokenHash, err := hash.HashPassword(refreshToken)
 	if err != nil {
-		return nil, errors.Internal("failed to hash refresh token")
+		return nil, errors.Internal(errors.ErrMsgFailedToHashRefreshToken)
 	}
 
 	// Find the refresh token
@@ -174,15 +174,15 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken, clientID, req
 		return nil, err
 	}
 	if token == nil {
-		return nil, errors.Unauthorized("invalid refresh token")
+		return nil, errors.Unauthorized(errors.ErrMsgInvalidToken)
 	}
 
 	// Validate token
 	if token.IsRevoked {
-		return nil, errors.Unauthorized("refresh token has been revoked")
+		return nil, errors.Unauthorized(errors.ErrMsgTokenRevoked)
 	}
 	if time.Now().After(token.ExpiresAt) {
-		return nil, errors.Unauthorized("refresh token has expired")
+		return nil, errors.Unauthorized(errors.ErrMsgTokenExpired)
 	}
 	if token.ClientID != clientID {
 		return nil, errors.Unauthorized("refresh token was not issued to this client")
@@ -223,7 +223,7 @@ func (s *Service) RevokeAccessToken(ctx context.Context, tokenValue, clientID st
 	// Verify token belongs to client
 	token, err := s.tokenRepo.FindAccessToken(ctx, tokenID)
 	if err != nil || token == nil {
-		return errors.NotFound("token not found")
+		return errors.NotFound(errors.ErrMsgTokenNotFound)
 	}
 
 	if token.ClientID != clientID {
@@ -247,13 +247,13 @@ func (s *Service) RevokeRefreshToken(ctx context.Context, tokenValue, clientID s
 	// Hash the refresh token
 	tokenHash, err := hash.HashPassword(tokenValue)
 	if err != nil {
-		return errors.Internal("failed to hash refresh token")
+		return errors.Internal(errors.ErrMsgFailedToHashRefreshToken)
 	}
 
 	// Find the refresh token
 	token, err := s.tokenRepo.FindRefreshTokenByHash(ctx, tokenHash)
 	if err != nil || token == nil {
-		return errors.NotFound("token not found")
+		return errors.NotFound(errors.ErrMsgTokenNotFound)
 	}
 
 	if token.ClientID != clientID {
@@ -289,12 +289,12 @@ func (s *Service) ValidateAccessToken(ctx context.Context, tokenValue string) (*
 	})
 
 	if err != nil {
-		return nil, errors.Unauthorized("invalid token")
+		return nil, errors.Unauthorized(errors.ErrMsgInvalidToken)
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, errors.Unauthorized("invalid token claims")
+		return nil, errors.Unauthorized(errors.ErrMsgInvalidTokenClaims)
 	}
 
 	// Check cache first
@@ -309,7 +309,7 @@ func (s *Service) ValidateAccessToken(ctx context.Context, tokenValue string) (*
 		return nil, err
 	}
 	if isRevoked {
-		return nil, errors.Unauthorized("token has been revoked")
+		return nil, errors.Unauthorized(errors.ErrMsgTokenRevoked)
 	}
 
 	return &claims, nil
@@ -408,17 +408,17 @@ func (s *Service) createRefreshToken() (string, string, error) {
 func (s *Service) getTokenIDFromJWT(tokenValue string) (string, error) {
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenValue, jwt.MapClaims{})
 	if err != nil {
-		return "", errors.Unauthorized("invalid token format")
+		return "", errors.Unauthorized(errors.ErrMsgInvalidTokenFormat)
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", errors.Unauthorized("invalid token claims")
+		return "", errors.Unauthorized(errors.ErrMsgInvalidTokenClaims)
 	}
 
 	tokenID, ok := claims[jwtutil.ClaimKeyJTI].(string)
 	if !ok {
-		return "", errors.Unauthorized("invalid token ID")
+		return "", errors.Unauthorized(errors.ErrMsgInvalidTokenID)
 	}
 
 	return tokenID, nil
