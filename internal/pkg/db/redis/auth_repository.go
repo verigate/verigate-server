@@ -40,7 +40,7 @@ func (r *authRepository) SaveRefreshToken(ctx context.Context, token *auth.Refre
 	// Serialize the refresh token data to JSON
 	tokenData, err := json.Marshal(token)
 	if err != nil {
-		return errors.Internal("failed to marshal refresh token")
+		return errors.Internal(errors.ErrMsgFailedToMarshalRefreshToken)
 	}
 
 	// Create a pipeline for atomic operations
@@ -78,7 +78,7 @@ func (r *authRepository) FindRefreshToken(ctx context.Context, tokenID string) (
 
 	var token auth.RefreshToken
 	if err := json.Unmarshal([]byte(data), &token); err != nil {
-		return nil, errors.Internal("failed to unmarshal refresh token")
+		return nil, errors.Internal(errors.ErrMsgFailedToUnmarshalRefreshToken)
 	}
 
 	return &token, nil
@@ -132,14 +132,14 @@ func (r *authRepository) RevokeRefreshToken(ctx context.Context, tokenID string)
 	// Get the existing token
 	data, err := r.client.Get(ctx, tokenKey).Result()
 	if err == redis.Nil {
-		return errors.NotFound("refresh token not found")
+		return errors.NotFound(errors.ErrMsgRefreshTokenNotFound)
 	} else if err != nil {
 		return errors.Internal("failed to get refresh token: " + err.Error())
 	}
 
 	var token auth.RefreshToken
 	if err := json.Unmarshal([]byte(data), &token); err != nil {
-		return errors.Internal("failed to unmarshal refresh token")
+		return errors.Internal(errors.ErrMsgFailedToUnmarshalRefreshToken)
 	}
 
 	// Mark the token as revoked
@@ -148,7 +148,7 @@ func (r *authRepository) RevokeRefreshToken(ctx context.Context, tokenID string)
 	// Save the updated token
 	updatedData, err := json.Marshal(token)
 	if err != nil {
-		return errors.Internal("failed to marshal updated refresh token")
+		return errors.Internal(errors.ErrMsgFailedToMarshalUpdatedRefreshToken)
 	}
 
 	// Preserve the expiry time

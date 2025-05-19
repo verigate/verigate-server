@@ -185,14 +185,14 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken, clientID, req
 		return nil, errors.Unauthorized(errors.ErrMsgTokenExpired)
 	}
 	if token.ClientID != clientID {
-		return nil, errors.Unauthorized("refresh token was not issued to this client")
+		return nil, errors.Unauthorized(errors.ErrMsgRefreshTokenNotIssuedToClient)
 	}
 
 	// Validate requested scope
 	scope := token.Scope
 	if requestedScope != "" {
 		if !s.isScopeSubset(requestedScope, token.Scope) {
-			return nil, errors.BadRequest("requested scope exceeds original scope")
+			return nil, errors.BadRequest(errors.ErrMsgRequestedScopeExceedsOriginal)
 		}
 		scope = requestedScope
 	}
@@ -227,7 +227,7 @@ func (s *Service) RevokeAccessToken(ctx context.Context, tokenValue, clientID st
 	}
 
 	if token.ClientID != clientID {
-		return errors.Forbidden("token does not belong to client")
+		return errors.Forbidden(errors.ErrMsgTokenNotBelongToClient)
 	}
 
 	// Revoke token
@@ -257,7 +257,7 @@ func (s *Service) RevokeRefreshToken(ctx context.Context, tokenValue, clientID s
 	}
 
 	if token.ClientID != clientID {
-		return errors.Forbidden("token does not belong to client")
+		return errors.Forbidden(errors.ErrMsgTokenNotBelongToClient)
 	}
 
 	// Revoke refresh token and associated access token
@@ -350,12 +350,12 @@ func (s *Service) RevokeToken(ctx context.Context, tokenID string, userID uint) 
 		return err
 	}
 	if token == nil {
-		return errors.NotFound("token not found")
+		return errors.NotFound(errors.ErrMsgTokenNotFound)
 	}
 
 	// Check ownership
 	if token.UserID != userID {
-		return errors.Forbidden("not authorized to revoke this token")
+		return errors.Forbidden(errors.ErrMsgNotAuthorizedToRevokeToken)
 	}
 
 	return s.tokenRepo.RevokeAccessToken(ctx, tokenID)

@@ -44,7 +44,7 @@ func (r *tokenRepository) SaveAccessToken(ctx context.Context, token *token.Acce
 	).Scan(&token.ID)
 
 	if err != nil {
-		return errors.Internal("Failed to save access token")
+		return errors.Internal(errors.ErrMsgFailedToSaveAccessToken)
 	}
 
 	return nil
@@ -76,7 +76,7 @@ func (r *tokenRepository) FindAccessToken(ctx context.Context, tokenID string) (
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to find access token")
+		return nil, errors.Internal(errors.ErrMsgFailedToFindAccessToken)
 	}
 
 	return &t, nil
@@ -89,7 +89,7 @@ func (r *tokenRepository) FindAccessTokensByUserID(ctx context.Context, userID u
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM access_tokens WHERE user_id = $1"
 	if err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&total); err != nil {
-		return nil, 0, errors.Internal("Failed to count access tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToCountAccessTokens)
 	}
 
 	// Get tokens with pagination
@@ -103,7 +103,7 @@ func (r *tokenRepository) FindAccessTokensByUserID(ctx context.Context, userID u
 
 	rows, err := r.db.QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
-		return nil, 0, errors.Internal("Failed to get access tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToGetAccessTokens)
 	}
 	defer rows.Close()
 
@@ -121,13 +121,13 @@ func (r *tokenRepository) FindAccessTokensByUserID(ctx context.Context, userID u
 			&t.CreatedAt,
 			&t.IsRevoked,
 		); err != nil {
-			return nil, 0, errors.Internal("Failed to scan access token")
+			return nil, 0, errors.Internal(errors.ErrMsgFailedToScanAccessToken)
 		}
 		tokens = append(tokens, t)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, errors.Internal("Error iterating access tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgErrorIteratingAccessTokens)
 	}
 
 	return tokens, total, nil
@@ -140,7 +140,7 @@ func (r *tokenRepository) FindAccessTokensByClientID(ctx context.Context, client
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM access_tokens WHERE client_id = $1"
 	if err := r.db.QueryRowContext(ctx, countQuery, clientID).Scan(&total); err != nil {
-		return nil, 0, errors.Internal("Failed to count access tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToCountAccessTokens)
 	}
 
 	// Get tokens with pagination
@@ -154,7 +154,7 @@ func (r *tokenRepository) FindAccessTokensByClientID(ctx context.Context, client
 
 	rows, err := r.db.QueryContext(ctx, query, clientID, limit, offset)
 	if err != nil {
-		return nil, 0, errors.Internal("Failed to get access tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToGetAccessTokens)
 	}
 	defer rows.Close()
 
@@ -172,13 +172,13 @@ func (r *tokenRepository) FindAccessTokensByClientID(ctx context.Context, client
 			&t.CreatedAt,
 			&t.IsRevoked,
 		); err != nil {
-			return nil, 0, errors.Internal("Failed to scan access token")
+			return nil, 0, errors.Internal(errors.ErrMsgFailedToScanAccessToken)
 		}
 		tokens = append(tokens, t)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, errors.Internal("Error iterating access tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgErrorIteratingAccessTokens)
 	}
 
 	return tokens, total, nil
@@ -193,16 +193,16 @@ func (r *tokenRepository) RevokeAccessToken(ctx context.Context, tokenID string)
 
 	result, err := r.db.ExecContext(ctx, query, tokenID)
 	if err != nil {
-		return errors.Internal("Failed to revoke access token")
+		return errors.Internal(errors.ErrMsgFailedToRevokeAccessToken)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows")
+		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows)
 	}
 
 	if rows == 0 {
-		return errors.NotFound("Access token not found")
+		return errors.NotFound(errors.ErrMsgAccessTokenNotFound)
 	}
 
 	return nil
@@ -217,7 +217,7 @@ func (r *tokenRepository) RevokeAccessTokensByUserID(ctx context.Context, userID
 
 	_, err := r.db.ExecContext(ctx, query, userID)
 	if err != nil {
-		return errors.Internal("Failed to revoke access tokens")
+		return errors.Internal(errors.ErrMsgFailedToRevokeAccessTokens)
 	}
 
 	return nil
@@ -232,7 +232,7 @@ func (r *tokenRepository) RevokeAccessTokensByClientID(ctx context.Context, clie
 
 	_, err := r.db.ExecContext(ctx, query, clientID)
 	if err != nil {
-		return errors.Internal("Failed to revoke access tokens")
+		return errors.Internal(errors.ErrMsgFailedToRevokeAccessTokens)
 	}
 
 	return nil
@@ -251,7 +251,7 @@ func (r *tokenRepository) RevokeAccessTokensByAuthCode(ctx context.Context, auth
 
 	_, err := r.db.ExecContext(ctx, query, authCode)
 	if err != nil {
-		return errors.Internal("Failed to revoke access tokens by auth code")
+		return errors.Internal(errors.ErrMsgFailedToRevokeAccessTokensByAuthCode)
 	}
 
 	return nil
@@ -266,7 +266,7 @@ func (r *tokenRepository) IsAccessTokenRevoked(ctx context.Context, tokenID stri
 		return true, nil // If token doesn't exist, consider it revoked
 	}
 	if err != nil {
-		return false, errors.Internal("Failed to check token revocation status")
+		return false, errors.Internal(errors.ErrMsgFailedToCheckTokenRevocationStatus)
 	}
 
 	return isRevoked, nil
@@ -292,7 +292,7 @@ func (r *tokenRepository) SaveRefreshToken(ctx context.Context, token *token.Ref
 	).Scan(&token.ID)
 
 	if err != nil {
-		return errors.Internal("Failed to save refresh token")
+		return errors.Internal(errors.ErrMsgFailedToSaveRefreshToken)
 	}
 
 	return nil
@@ -323,7 +323,7 @@ func (r *tokenRepository) FindRefreshToken(ctx context.Context, tokenID string) 
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to find refresh token")
+		return nil, errors.Internal(errors.ErrMsgFailedToFindRefreshToken)
 	}
 
 	return &t, nil
@@ -354,7 +354,7 @@ func (r *tokenRepository) FindRefreshTokenByHash(ctx context.Context, tokenHash 
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to find refresh token by hash")
+		return nil, errors.Internal(errors.ErrMsgFailedToFindRefreshTokenByHash)
 	}
 
 	return &t, nil
@@ -367,7 +367,7 @@ func (r *tokenRepository) FindRefreshTokensByUserID(ctx context.Context, userID 
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM refresh_tokens WHERE user_id = $1"
 	if err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&total); err != nil {
-		return nil, 0, errors.Internal("Failed to count refresh tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToCountRefreshTokens)
 	}
 
 	// Get tokens with pagination
@@ -381,7 +381,7 @@ func (r *tokenRepository) FindRefreshTokensByUserID(ctx context.Context, userID 
 
 	rows, err := r.db.QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
-		return nil, 0, errors.Internal("Failed to get refresh tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToGetRefreshTokens)
 	}
 	defer rows.Close()
 
@@ -400,13 +400,13 @@ func (r *tokenRepository) FindRefreshTokensByUserID(ctx context.Context, userID 
 			&t.CreatedAt,
 			&t.IsRevoked,
 		); err != nil {
-			return nil, 0, errors.Internal("Failed to scan refresh token")
+			return nil, 0, errors.Internal(errors.ErrMsgFailedToScanRefreshToken)
 		}
 		tokens = append(tokens, t)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, errors.Internal("Error iterating refresh tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgErrorIteratingRefreshTokens)
 	}
 
 	return tokens, total, nil
@@ -419,7 +419,7 @@ func (r *tokenRepository) FindRefreshTokensByClientID(ctx context.Context, clien
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM refresh_tokens WHERE client_id = $1"
 	if err := r.db.QueryRowContext(ctx, countQuery, clientID).Scan(&total); err != nil {
-		return nil, 0, errors.Internal("Failed to count refresh tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToCountRefreshTokens)
 	}
 
 	// Get tokens with pagination
@@ -433,7 +433,7 @@ func (r *tokenRepository) FindRefreshTokensByClientID(ctx context.Context, clien
 
 	rows, err := r.db.QueryContext(ctx, query, clientID, limit, offset)
 	if err != nil {
-		return nil, 0, errors.Internal("Failed to get refresh tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToGetRefreshTokens)
 	}
 	defer rows.Close()
 
@@ -452,13 +452,13 @@ func (r *tokenRepository) FindRefreshTokensByClientID(ctx context.Context, clien
 			&t.CreatedAt,
 			&t.IsRevoked,
 		); err != nil {
-			return nil, 0, errors.Internal("Failed to scan refresh token")
+			return nil, 0, errors.Internal(errors.ErrMsgFailedToScanRefreshToken)
 		}
 		tokens = append(tokens, t)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, errors.Internal("Error iterating refresh tokens")
+		return nil, 0, errors.Internal(errors.ErrMsgErrorIteratingRefreshTokens)
 	}
 
 	return tokens, total, nil
@@ -473,16 +473,16 @@ func (r *tokenRepository) RevokeRefreshToken(ctx context.Context, tokenID string
 
 	result, err := r.db.ExecContext(ctx, query, tokenID)
 	if err != nil {
-		return errors.Internal("Failed to revoke refresh token")
+		return errors.Internal(errors.ErrMsgFailedToRevokeRefreshToken)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows")
+		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows)
 	}
 
 	if rows == 0 {
-		return errors.NotFound("Refresh token not found")
+		return errors.NotFound(errors.ErrMsgRefreshTokenNotFound)
 	}
 
 	return nil
@@ -497,7 +497,7 @@ func (r *tokenRepository) RevokeRefreshTokensByUserID(ctx context.Context, userI
 
 	_, err := r.db.ExecContext(ctx, query, userID)
 	if err != nil {
-		return errors.Internal("Failed to revoke refresh tokens")
+		return errors.Internal(errors.ErrMsgFailedToRevokeRefreshTokens)
 	}
 
 	return nil
@@ -512,7 +512,7 @@ func (r *tokenRepository) RevokeRefreshTokensByClientID(ctx context.Context, cli
 
 	_, err := r.db.ExecContext(ctx, query, clientID)
 	if err != nil {
-		return errors.Internal("Failed to revoke refresh tokens")
+		return errors.Internal(errors.ErrMsgFailedToRevokeRefreshTokens)
 	}
 
 	return nil
@@ -527,7 +527,7 @@ func (r *tokenRepository) RevokeRefreshTokensByAccessTokenID(ctx context.Context
 
 	_, err := r.db.ExecContext(ctx, query, accessTokenID)
 	if err != nil {
-		return errors.Internal("Failed to revoke refresh tokens")
+		return errors.Internal(errors.ErrMsgFailedToRevokeRefreshTokens)
 	}
 
 	return nil

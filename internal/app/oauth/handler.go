@@ -93,7 +93,7 @@ func (h *Handler) Token(c *gin.Context) {
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:            "invalid_request",
-			ErrorDescription: "Invalid request format",
+			ErrorDescription: "invalid request format",
 		})
 		return
 	}
@@ -161,7 +161,7 @@ func (h *Handler) Revoke(c *gin.Context) {
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:            "invalid_request",
-			ErrorDescription: "Invalid request format",
+			ErrorDescription: "invalid request format",
 		})
 		return
 	}
@@ -233,7 +233,7 @@ func (h *Handler) HandleConsent(c *gin.Context) {
 
 	var req ConsentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat))
 		return
 	}
 
@@ -242,7 +242,7 @@ func (h *Handler) HandleConsent(c *gin.Context) {
 	if !req.Consent {
 		// User denied consent
 		c.JSON(http.StatusOK, gin.H{
-			"redirect": h.buildErrorRedirect(c.Query("redirect_uri"), c.Query("state"), "access_denied", "User denied access"),
+			"redirect": h.buildErrorRedirect(c.Query("redirect_uri"), c.Query("state"), errors.ErrMsgAccessDenied, errors.ErrMsgUserDeniedAccess),
 		})
 		return
 	}
@@ -287,12 +287,12 @@ func (h *Handler) getClientCredentials(c *gin.Context, req TokenRequest) (string
 	if authHeader != "" && strings.HasPrefix(authHeader, "Basic ") {
 		credentials, err := base64.StdEncoding.DecodeString(authHeader[6:])
 		if err != nil {
-			return "", "", errors.BadRequest("Invalid basic auth format")
+			return "", "", errors.BadRequest(errors.ErrMsgInvalidBasicAuthFormat)
 		}
 
 		parts := strings.SplitN(string(credentials), ":", 2)
 		if len(parts) != 2 {
-			return "", "", errors.BadRequest("Invalid basic auth format")
+			return "", "", errors.BadRequest(errors.ErrMsgInvalidBasicAuthFormat)
 		}
 
 		return parts[0], parts[1], nil
@@ -310,7 +310,7 @@ func (h *Handler) getClientCredentials(c *gin.Context, req TokenRequest) (string
 	}
 
 	if clientID == "" {
-		return "", "", errors.BadRequest("Missing client_id")
+		return "", "", errors.BadRequest(errors.ErrMsgMissingClientId)
 	}
 
 	return clientID, clientSecret, nil

@@ -65,7 +65,7 @@ func (r *clientRepository) Save(ctx context.Context, client *client.Client) erro
 	if err != nil {
 		// Check for specific database errors like unique constraint violations
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code.Name() == "unique_violation" {
-			return errors.Conflict("Client with this client_id already exists")
+			return errors.Conflict(errors.ErrMsgClientIdAlreadyExists)
 		}
 		return errors.Internal("Failed to create client: " + err.Error())
 	}

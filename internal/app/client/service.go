@@ -111,7 +111,7 @@ func (s *Service) GetByID(ctx context.Context, id uint) (*ClientResponse, error)
 		return nil, err
 	}
 	if client == nil {
-		return nil, errors.NotFound("Client not found")
+		return nil, errors.NotFound(errors.ErrMsgClientNotFound)
 	}
 
 	return s.toResponse(client), nil
@@ -139,12 +139,12 @@ func (s *Service) Update(ctx context.Context, id uint, ownerID uint, req UpdateC
 		return err
 	}
 	if client == nil {
-		return errors.NotFound("Client not found")
+		return errors.NotFound(errors.ErrMsgClientNotFound)
 	}
 
 	// Check ownership
 	if client.OwnerID != ownerID {
-		return errors.Forbidden("Not authorized to update this client")
+		return errors.Forbidden(errors.ErrMsgNotAuthorizedForClient)
 	}
 
 	// Update fields if provided
@@ -194,12 +194,12 @@ func (s *Service) Delete(ctx context.Context, id uint, ownerID uint) error {
 		return err
 	}
 	if client == nil {
-		return errors.NotFound("Client not found")
+		return errors.NotFound(errors.ErrMsgClientNotFound)
 	}
 
 	// Check ownership
 	if client.OwnerID != ownerID {
-		return errors.Forbidden("Not authorized to delete this client")
+		return errors.Forbidden(errors.ErrMsgNotAuthorizedToDeleteClient)
 	}
 
 	return s.repo.Delete(ctx, id)
@@ -238,17 +238,17 @@ func (s *Service) ValidateClient(ctx context.Context, clientID, clientSecret str
 		return nil, err
 	}
 	if client == nil {
-		return nil, errors.Unauthorized("Invalid client credentials")
+		return nil, errors.Unauthorized(errors.ErrMsgInvalidClientCredentials)
 	}
 
 	if !client.IsActive {
-		return nil, errors.Unauthorized("Client is not active")
+		return nil, errors.Unauthorized(errors.ErrMsgClientNotActive)
 	}
 
 	// For confidential clients, verify secret
 	if client.IsConfidential {
 		if err := hash.CompareHashAndPassword(client.ClientSecret, clientSecret); err != nil {
-			return nil, errors.Unauthorized("Invalid client credentials")
+			return nil, errors.Unauthorized(errors.ErrMsgInvalidClientCredentials)
 		}
 	}
 

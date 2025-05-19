@@ -51,7 +51,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat))
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *Handler) Register(c *gin.Context) {
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat))
 		return
 	}
 
@@ -94,7 +94,7 @@ func (h *Handler) Login(c *gin.Context) {
 func (h *Handler) RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat))
 		return
 	}
 
@@ -132,7 +132,7 @@ func (h *Handler) GetMe(c *gin.Context) {
 func (h *Handler) UpdateMe(c *gin.Context) {
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat))
 		return
 	}
 
@@ -151,7 +151,7 @@ func (h *Handler) UpdateMe(c *gin.Context) {
 func (h *Handler) ChangePassword(c *gin.Context) {
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat))
 		return
 	}
 

@@ -48,7 +48,7 @@ func (r *oauthRepository) SaveAuthorizationCode(ctx context.Context, code *oauth
 	).Scan(&code.ID)
 
 	if err != nil {
-		return errors.Internal(fmt.Sprintf("Failed to save authorization code: %s", err.Error()))
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToSaveAuthCode, err.Error()))
 	}
 
 	return nil
@@ -85,7 +85,7 @@ func (r *oauthRepository) FindAuthorizationCode(ctx context.Context, code string
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal(fmt.Sprintf("Failed to find authorization code: %s", err.Error()))
+		return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToFindAuthCode, err.Error()))
 	}
 
 	return &ac, nil
@@ -104,16 +104,16 @@ func (r *oauthRepository) MarkCodeAsUsed(ctx context.Context, code string) error
 
 	result, err := r.db.ExecContext(ctx, query, code)
 	if err != nil {
-		return errors.Internal("Failed to mark code as used")
+		return errors.Internal(errors.ErrMsgFailedToMarkCodeAsUsed)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows")
+		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows)
 	}
 
 	if rows == 0 {
-		return errors.NotFound("Authorization code not found")
+		return errors.NotFound(errors.ErrMsgAuthorizationCodeNotFound)
 	}
 
 	return nil
@@ -127,7 +127,7 @@ func (r *oauthRepository) DeleteExpiredCodes(ctx context.Context) error {
 
 	_, err := r.db.ExecContext(ctx, query, time.Now())
 	if err != nil {
-		return errors.Internal("Failed to delete expired codes")
+		return errors.Internal(errors.ErrMsgFailedToDeleteExpiredCodes)
 	}
 
 	return nil
@@ -149,7 +149,7 @@ func (r *oauthRepository) SaveUserConsent(ctx context.Context, consent *oauth.Us
 	).Scan(&consent.ID)
 
 	if err != nil {
-		return errors.Internal("Failed to save user consent")
+		return errors.Internal(errors.ErrMsgFailedToSaveUserConsent)
 	}
 
 	return nil
@@ -179,7 +179,7 @@ func (r *oauthRepository) FindUserConsent(ctx context.Context, userID uint, clie
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal(fmt.Sprintf("Failed to find user consent: %s", err.Error()))
+		return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToFindUserConsent, err.Error()))
 	}
 
 	return &uc, nil
@@ -203,16 +203,16 @@ func (r *oauthRepository) UpdateUserConsent(ctx context.Context, consent *oauth.
 	)
 
 	if err != nil {
-		return errors.Internal(fmt.Sprintf("Failed to update user consent: %s", err.Error()))
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToUpdateUserConsent, err.Error()))
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal(fmt.Sprintf("Failed to get affected rows: %s", err.Error()))
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToGetAffectedRows, err.Error()))
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("User consent not found for user ID %d and client ID %s", consent.UserID, consent.ClientID))
+		return errors.NotFound(fmt.Sprintf(errors.ErrMsgUserConsentNotFoundForUserAndClient, consent.UserID, consent.ClientID))
 	}
 
 	return nil
@@ -229,16 +229,16 @@ func (r *oauthRepository) DeleteUserConsent(ctx context.Context, userID uint, cl
 
 	result, err := r.db.ExecContext(ctx, query, userID, clientID)
 	if err != nil {
-		return errors.Internal(fmt.Sprintf("Failed to delete user consent: %s", err.Error()))
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToDeleteUserConsent, err.Error()))
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal(fmt.Sprintf("Failed to get affected rows: %s", err.Error()))
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToGetAffectedRows, err.Error()))
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("User consent not found for user ID %d and client ID %s", userID, clientID))
+		return errors.NotFound(fmt.Sprintf(errors.ErrMsgUserConsentNotFoundForUserAndClient, userID, clientID))
 	}
 
 	return nil

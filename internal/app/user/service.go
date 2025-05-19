@@ -34,7 +34,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*UserRespo
 		return nil, err
 	}
 	if existingUser != nil {
-		return nil, errors.BadRequest("Email already registered")
+		return nil, errors.BadRequest(errors.ErrMsgEmailAlreadyRegistered)
 	}
 
 	// Check if username already exists
@@ -43,7 +43,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*UserRespo
 		return nil, err
 	}
 	if existingUser != nil {
-		return nil, errors.BadRequest("Username already taken")
+		return nil, errors.BadRequest(errors.ErrMsgUsernameAlreadyTaken)
 	}
 
 	// Hash password
@@ -77,17 +77,17 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, userAgent, ipAddr
 		return nil, err
 	}
 	if user == nil {
-		return nil, errors.Unauthorized("Invalid credentials")
+		return nil, errors.Unauthorized(errors.ErrMsgInvalidCredentials)
 	}
 
 	// Verify password
 	if err := hash.CompareHashAndPassword(user.PasswordHash, req.Password); err != nil {
-		return nil, errors.Unauthorized("Invalid credentials")
+		return nil, errors.Unauthorized(errors.ErrMsgInvalidCredentials)
 	}
 
 	// Check if user is active
 	if !user.IsActive {
-		return nil, errors.Unauthorized("Account is not active")
+		return nil, errors.Unauthorized(errors.ErrMsgAccountNotActive)
 	}
 
 	// Update last login
@@ -115,7 +115,7 @@ func (s *Service) GetByID(ctx context.Context, id uint) (*UserResponse, error) {
 		return nil, err
 	}
 	if user == nil {
-		return nil, errors.NotFound("User not found")
+		return nil, errors.NotFound(errors.ErrMsgUserNotFound)
 	}
 
 	return s.toResponse(user), nil
@@ -127,7 +127,7 @@ func (s *Service) Update(ctx context.Context, id uint, req UpdateUserRequest) er
 		return err
 	}
 	if user == nil {
-		return errors.NotFound("User not found")
+		return errors.NotFound(errors.ErrMsgUserNotFound)
 	}
 
 	// Update fields
@@ -151,12 +151,12 @@ func (s *Service) ChangePassword(ctx context.Context, id uint, req ChangePasswor
 		return err
 	}
 	if user == nil {
-		return errors.NotFound("User not found")
+		return errors.NotFound(errors.ErrMsgUserNotFound)
 	}
 
 	// Verify old password
 	if err := hash.CompareHashAndPassword(user.PasswordHash, req.OldPassword); err != nil {
-		return errors.Unauthorized("Incorrect password")
+		return errors.Unauthorized(errors.ErrMsgIncorrectPassword)
 	}
 
 	// Hash new password
@@ -174,7 +174,7 @@ func (s *Service) Delete(ctx context.Context, id uint) error {
 		return err
 	}
 	if user == nil {
-		return errors.NotFound("User not found")
+		return errors.NotFound(errors.ErrMsgUserNotFound)
 	}
 
 	return s.repo.Delete(ctx, id)
