@@ -18,12 +18,12 @@ const (
 	AuthHeaderPrefix = "Bearer"
 
 	// Error messages for authentication failures
-	ErrMsgMissingAuthHeader = "Missing authorization header"
-	ErrMsgInvalidAuthFormat = "Invalid authorization header format"
-	ErrMsgInvalidToken      = "Invalid token"
+	ErrMsgMissingAuthHeader = "missing authorization header"
+	ErrMsgInvalidAuthFormat = "invalid authorization header format"
+	ErrMsgInvalidToken      = "invalid token"
 
 	// Context keys for authentication data
-	ContextKeyUserID = "user_id"
+	ContextKeyUserID = "user_id" // Must match jwt.ClaimKeyUserID
 	ContextKeyClaims = "claims"
 )
 

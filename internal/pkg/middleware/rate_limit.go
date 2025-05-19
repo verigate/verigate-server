@@ -88,7 +88,7 @@ func RateLimitMiddleware(limiter *RedisRateLimiter) gin.HandlerFunc {
 		c.Header("X-RateLimit-Reset", fmt.Sprintf("%d", now+int64(limiter.window.Seconds())))
 
 		if count > int64(limiter.limitPerMin) {
-			c.Error(errors.TooManyRequests("Rate limit exceeded"))
+			c.Error(errors.TooManyRequests(errors.ErrMsgRateLimitExceeded))
 			c.Abort()
 			return
 		}

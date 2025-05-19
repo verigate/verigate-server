@@ -69,7 +69,7 @@ func (h *Handler) List(c *gin.Context) {
 func (h *Handler) Revoke(c *gin.Context) {
 	tokenID := c.Param("id")
 	if tokenID == "" {
-		c.Error(errors.BadRequest("token ID is required"))
+		c.Error(errors.BadRequest(errors.ErrMsgTokenIdRequired))
 		return
 	}
 

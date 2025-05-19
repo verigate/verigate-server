@@ -19,14 +19,15 @@ const (
 	TokenIssuer      = "oauth-server" // Issuer value for all JWT tokens
 
 	// JWT claim key constants
-	ClaimKeyJTI   = "jti"   // JWT ID claim
-	ClaimKeySub   = "sub"   // Subject claim (user ID)
-	ClaimKeyAud   = "aud"   // Audience claim (client ID)
-	ClaimKeyScope = "scope" // Scope claim
-	ClaimKeyIAT   = "iat"   // Issued At claim
-	ClaimKeyEXP   = "exp"   // Expiration claim
-	ClaimKeyISS   = "iss"   // Issuer claim
-	ClaimKeyType  = "type"  // Token type claim
+	ClaimKeyJTI    = "jti"     // JWT ID claim
+	ClaimKeySub    = "sub"     // Subject claim (user ID)
+	ClaimKeyAud    = "aud"     // Audience claim (client ID)
+	ClaimKeyScope  = "scope"   // Scope claim
+	ClaimKeyIAT    = "iat"     // Issued At claim
+	ClaimKeyEXP    = "exp"     // Expiration claim
+	ClaimKeyISS    = "iss"     // Issuer claim
+	ClaimKeyType   = "type"    // Token type claim
+	ClaimKeyUserID = "user_id" // Custom user ID claim
 )
 
 // Claims represents the custom claims structure for JWT tokens.
@@ -148,35 +149,35 @@ func ValidateAccessTokenWithClaims(tokenString string, expectedIssuer string) (u
 	})
 
 	if err != nil {
-		return 0, errors.Unauthorized("invalid token: " + err.Error())
+		return 0, errors.Unauthorized(errors.ErrMsgInvalidToken + ": " + err.Error())
 	}
 
 	if !token.Valid {
-		return 0, errors.Unauthorized("invalid token")
+		return 0, errors.Unauthorized(errors.ErrMsgInvalidToken)
 	}
 
 	// Extract claims
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return 0, errors.Unauthorized("invalid token claims")
+		return 0, errors.Unauthorized(errors.ErrMsgInvalidTokenClaims)
 	}
 
 	// Check token type
-	tokenType, ok := claims["type"].(string)
+	tokenType, ok := claims[ClaimKeyType].(string)
 	if !ok || tokenType != TokenTypeAccess {
-		return 0, errors.Unauthorized("invalid token type")
+		return 0, errors.Unauthorized(errors.ErrMsgInvalidTokenType)
 	}
 
 	// Check issuer
-	issuer, ok := claims["iss"].(string)
+	issuer, ok := claims[ClaimKeyISS].(string)
 	if !ok || issuer != expectedIssuer {
-		return 0, errors.Unauthorized("invalid token issuer")
+		return 0, errors.Unauthorized(errors.ErrMsgInvalidTokenIssuer)
 	}
 
 	// Extract user ID
-	userIDFloat, ok := claims["user_id"].(float64)
+	userIDFloat, ok := claims[ClaimKeyUserID].(float64)
 	if !ok {
-		return 0, errors.Unauthorized("invalid user ID in token")
+		return 0, errors.Unauthorized(errors.ErrMsgInvalidUserID)
 	}
 
 	return uint(userIDFloat), nil
@@ -188,7 +189,7 @@ func ValidateAccessTokenWithClaims(tokenString string, expectedIssuer string) (u
 func ValidateTokenForRevocation(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, errors.Unauthorized("unexpected signing method")
+			return nil, errors.Unauthorized(errors.ErrMsgInvalidTokenFormat)
 		}
 		return publicKey, nil
 	})

@@ -48,12 +48,12 @@ func (r *userRepository) Save(ctx context.Context, user *user.User) error {
 		// Check if it's a unique constraint violation on username or email
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			if pqErr.Constraint == "users_username_key" {
-				return errors.Conflict("Username already exists")
+				return errors.Conflict(errors.ErrMsgUsernameAlreadyTaken)
 			} else if pqErr.Constraint == "users_email_key" {
-				return errors.Conflict("Email already exists")
+				return errors.Conflict(errors.ErrMsgEmailAlreadyRegistered)
 			}
 		}
-		return errors.Internal("Failed to create user: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToCreateUser + ": " + err.Error())
 	}
 
 	return nil
@@ -78,16 +78,16 @@ func (r *userRepository) Update(ctx context.Context, user *user.User) error {
 	)
 
 	if err != nil {
-		return errors.Internal("Failed to update user: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToUpdateUser + ": " + err.Error())
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows + ": " + err.Error())
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("User with ID %d not found", user.ID))
+		return errors.NotFound(fmt.Sprintf("%s: ID %d", errors.ErrMsgUserNotFound, user.ID))
 	}
 
 	return nil
@@ -122,7 +122,7 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*user.User, err
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to get user by ID: " + err.Error())
+		return nil, errors.Internal(errors.ErrMsgFailedToGetUserByID + ": " + err.Error())
 	}
 
 	return &u, nil
@@ -158,7 +158,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*user.U
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to get user by email: " + err.Error())
+		return nil, errors.Internal(errors.ErrMsgFailedToGetUserByEmail + ": " + err.Error())
 	}
 
 	return &u, nil
@@ -194,7 +194,7 @@ func (r *userRepository) FindByUsername(ctx context.Context, username string) (*
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to get user by username: " + err.Error())
+		return nil, errors.Internal(errors.ErrMsgFailedToGetUserByUsername + ": " + err.Error())
 	}
 
 	return &u, nil
@@ -212,16 +212,16 @@ func (r *userRepository) UpdatePassword(ctx context.Context, id uint, passwordHa
 
 	result, err := r.db.ExecContext(ctx, query, id, passwordHash, time.Now())
 	if err != nil {
-		return errors.Internal("Failed to update password: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToUpdatePassword + ": " + err.Error())
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows + ": " + err.Error())
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("User with ID %d not found", id))
+		return errors.NotFound(fmt.Sprintf("%s: ID %d", errors.ErrMsgUserNotFound, id))
 	}
 
 	return nil
@@ -240,7 +240,7 @@ func (r *userRepository) UpdateLastLogin(ctx context.Context, id uint) error {
 
 	_, err := r.db.ExecContext(ctx, query, id, time.Now())
 	if err != nil {
-		return errors.Internal("Failed to update last login timestamp: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToUpdateUser + ": " + err.Error())
 	}
 
 	return nil
@@ -254,16 +254,16 @@ func (r *userRepository) Delete(ctx context.Context, id uint) error {
 
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
-		return errors.Internal("Failed to delete user: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToDeleteUser + ": " + err.Error())
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows after deletion: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows + ": " + err.Error())
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("User with ID %d not found", id))
+		return errors.NotFound(fmt.Sprintf("%s: ID %d", errors.ErrMsgUserNotFound, id))
 	}
 
 	return nil

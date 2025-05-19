@@ -1,5 +1,5 @@
 // Package client provides functionality for managing OAuth clients,
-// including registration, configuration, and permission management.
+// including registration, configuration, and management.
 package client
 
 import (
@@ -50,7 +50,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format: " + err.Error()))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat + ": " + err.Error()))
 		return
 	}
 
@@ -71,7 +71,7 @@ func (h *Handler) Create(c *gin.Context) {
 func (h *Handler) Get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.Error(errors.BadRequest("Invalid client ID: must be a positive integer"))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidClientId))
 		return
 	}
 
@@ -93,13 +93,13 @@ func (h *Handler) Get(c *gin.Context) {
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.Error(errors.BadRequest("Invalid client ID: must be a positive integer"))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidClientId))
 		return
 	}
 
 	var req UpdateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format: " + err.Error()))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat + ": " + err.Error()))
 		return
 	}
 
@@ -120,7 +120,7 @@ func (h *Handler) Update(c *gin.Context) {
 func (h *Handler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.Error(errors.BadRequest("Invalid client ID: must be a positive integer"))
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidClientId))
 		return
 	}
 

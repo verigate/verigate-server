@@ -47,7 +47,7 @@ func NewService(
 func (s *Service) Authorize(ctx context.Context, req AuthorizeRequest, userID uint) (string, error) {
 	// Validate response type
 	if req.ResponseType != "code" {
-		return "", errors.BadRequest("unsupported_response_type")
+		return "", errors.BadRequest(errors.ErrMsgUnsupportedResponseType)
 	}
 
 	// Validate client
@@ -56,7 +56,7 @@ func (s *Service) Authorize(ctx context.Context, req AuthorizeRequest, userID ui
 		return "", err
 	}
 	if client == nil || !client.IsActive {
-		return "", errors.BadRequest("invalid_client")
+		return "", errors.BadRequest(errors.ErrMsgInvalidClient)
 	}
 
 	// Validate redirect URI
@@ -68,12 +68,12 @@ func (s *Service) Authorize(ctx context.Context, req AuthorizeRequest, userID ui
 		}
 	}
 	if !validRedirect {
-		return "", errors.BadRequest("invalid_redirect_uri")
+		return "", errors.BadRequest(errors.ErrMsgInvalidRedirectUri)
 	}
 
 	// Validate PKCE
 	if req.CodeChallengeMethod != "" && req.CodeChallengeMethod != "plain" && req.CodeChallengeMethod != "S256" {
-		return "", errors.BadRequest("invalid_code_challenge_method")
+		return "", errors.BadRequest(errors.ErrMsgInvalidCodeChallengeMethod)
 	}
 
 	// Validate and normalize scope
@@ -84,7 +84,7 @@ func (s *Service) Authorize(ctx context.Context, req AuthorizeRequest, userID ui
 
 	validScope, err := s.scopeService.ValidateScope(ctx, requestedScope, client.Scope)
 	if err != nil || !validScope {
-		return "", errors.BadRequest("invalid_scope")
+		return "", errors.BadRequest(errors.ErrMsgInvalidScope)
 	}
 
 	// Check if consent is needed
@@ -96,7 +96,7 @@ func (s *Service) Authorize(ctx context.Context, req AuthorizeRequest, userID ui
 	// Generate authorization code
 	code, err := s.generateAuthorizationCode()
 	if err != nil {
-		return "", errors.Internal("failed to generate authorization code")
+		return "", errors.Internal(errors.ErrMsgFailedToGenerateAuthCode)
 	}
 
 	// Save authorization code
@@ -114,7 +114,7 @@ func (s *Service) Authorize(ctx context.Context, req AuthorizeRequest, userID ui
 	}
 
 	if err := s.oauthRepo.SaveAuthorizationCode(ctx, authCode); err != nil {
-		return "", errors.Internal("failed to save authorization code")
+		return "", errors.Internal(errors.ErrMsgFailedToSaveAuthCode)
 	}
 
 	return code, nil
@@ -127,7 +127,7 @@ func (s *Service) Token(ctx context.Context, req TokenRequest) (*TokenResponse, 
 	case "refresh_token":
 		return s.handleRefreshTokenGrant(ctx, req)
 	default:
-		return nil, errors.BadRequest("unsupported_grant_type")
+		return nil, errors.BadRequest(errors.ErrMsgUnsupportedGrantType)
 	}
 }
 
@@ -205,54 +205,54 @@ func (s *Service) GetConsentPageData(ctx context.Context, clientID, scope string
 func (s *Service) handleAuthorizationCodeGrant(ctx context.Context, req TokenRequest) (*TokenResponse, error) {
 	// Validate required parameters
 	if req.Code == "" || req.RedirectURI == "" {
-		return nil, errors.BadRequest("invalid_request")
+		return nil, errors.BadRequest(errors.ErrMsgInvalidRequest)
 	}
 
 	// Get and validate authorization code
 	authCode, err := s.oauthRepo.FindAuthorizationCode(ctx, req.Code)
 	if err != nil {
-		return nil, errors.Internal("failed to get authorization code")
+		return nil, errors.Internal(errors.ErrMsgFailedToGetAuthCode)
 	}
 	if authCode == nil {
-		return nil, errors.BadRequest("invalid_grant")
+		return nil, errors.BadRequest(errors.ErrMsgInvalidGrant)
 	}
 
 	// Validate code hasn't been used
 	if authCode.IsUsed {
 		// Security: revoke all tokens associated with this code
 		s.tokenService.RevokeTokensByAuthCode(ctx, req.Code)
-		return nil, errors.BadRequest("invalid_grant")
+		return nil, errors.BadRequest(errors.ErrMsgInvalidGrant)
 	}
 
 	// Validate code hasn't expired
 	if time.Now().After(authCode.ExpiresAt) {
-		return nil, errors.BadRequest("invalid_grant")
+		return nil, errors.BadRequest(errors.ErrMsgInvalidGrant)
 	}
 
 	// Validate client
 	if authCode.ClientID != req.ClientID {
-		return nil, errors.BadRequest("invalid_grant")
+		return nil, errors.BadRequest(errors.ErrMsgInvalidGrant)
 	}
 
 	// Validate redirect URI
 	if authCode.RedirectURI != req.RedirectURI {
-		return nil, errors.BadRequest("invalid_grant")
+		return nil, errors.BadRequest(errors.ErrMsgInvalidGrant)
 	}
 
 	// Validate PKCE if used
 	if authCode.CodeChallenge != "" {
 		if req.CodeVerifier == "" {
-			return nil, errors.BadRequest("invalid_grant")
+			return nil, errors.BadRequest(errors.ErrMsgInvalidGrant)
 		}
 
 		if !pkce.VerifyCodeChallenge(req.CodeVerifier, authCode.CodeChallenge, authCode.CodeChallengeMethod) {
-			return nil, errors.BadRequest("invalid_grant")
+			return nil, errors.BadRequest(errors.ErrMsgInvalidGrant)
 		}
 	}
 
 	// Mark code as used
 	if err := s.oauthRepo.MarkCodeAsUsed(ctx, req.Code); err != nil {
-		return nil, errors.Internal("failed to mark code as used")
+		return nil, errors.Internal(errors.ErrMsgFailedToMarkCodeAsUsed)
 	}
 
 	// Generate tokens
@@ -273,7 +273,7 @@ func (s *Service) handleAuthorizationCodeGrant(ctx context.Context, req TokenReq
 
 func (s *Service) handleRefreshTokenGrant(ctx context.Context, req TokenRequest) (*TokenResponse, error) {
 	if req.RefreshToken == "" {
-		return nil, errors.BadRequest("invalid_request")
+		return nil, errors.BadRequest(errors.ErrMsgInvalidRequest)
 	}
 
 	tokenResp, err := s.tokenService.RefreshTokens(ctx, req.RefreshToken, req.ClientID, req.Scope)
@@ -335,7 +335,7 @@ func (s *Service) IsPublicClient(ctx context.Context, clientID string) (bool, er
 		return false, err
 	}
 	if client == nil {
-		return false, errors.NotFound("client not found")
+		return false, errors.NotFound(errors.ErrMsgClientNotFound)
 	}
 	return !client.IsConfidential, nil
 }

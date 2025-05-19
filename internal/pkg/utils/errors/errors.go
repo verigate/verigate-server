@@ -11,21 +11,129 @@ import (
 // Common error message constants to ensure consistency
 const (
 	// Authentication related errors
-	ErrMsgInvalidToken           = "invalid token"
-	ErrMsgInvalidTokenClaims     = "invalid token claims"
-	ErrMsgInvalidTokenID         = "invalid token ID"
-	ErrMsgInvalidTokenFormat     = "invalid token format"
-	ErrMsgTokenRevoked           = "token has been revoked"
-	ErrMsgTokenExpired           = "token has expired"
-	ErrMsgTokenNotFound          = "token not found"
-	ErrMsgRefreshTokenNotFound   = "refresh token not found"
-	ErrMsgAccessTokenNotFound    = "access token not found"
-	
+	ErrMsgInvalidToken         = "invalid token"
+	ErrMsgInvalidTokenClaims   = "invalid token claims"
+	ErrMsgInvalidTokenID       = "invalid token ID"
+	ErrMsgInvalidTokenFormat   = "invalid token format"
+	ErrMsgInvalidTokenType     = "invalid token type"
+	ErrMsgInvalidTokenIssuer   = "invalid token issuer"
+	ErrMsgInvalidUserID        = "invalid user ID in token"
+	ErrMsgTokenRevoked         = "token has been revoked"
+	ErrMsgTokenExpired         = "token has expired"
+	ErrMsgTokenNotFound        = "token not found"
+	ErrMsgRefreshTokenNotFound = "refresh token not found"
+	ErrMsgAccessTokenNotFound  = "access token not found"
+
 	// Hash-related errors
-	ErrMsgFailedToHashPassword   = "failed to hash password"
-	ErrMsgFailedToHashToken      = "failed to hash token"
-	ErrMsgFailedToHashAccessToken = "failed to hash access token"
+	ErrMsgFailedToHashPassword     = "failed to hash password"
+	ErrMsgFailedToHashToken        = "failed to hash token"
+	ErrMsgFailedToHashAccessToken  = "failed to hash access token"
 	ErrMsgFailedToHashRefreshToken = "failed to hash refresh token"
+
+	// Database-related errors
+	ErrMsgFailedToSaveAccessToken   = "failed to save access token"
+	ErrMsgFailedToSaveRefreshToken  = "failed to save refresh token"
+	ErrMsgFailedToFindAccessToken   = "failed to find access token"
+	ErrMsgFailedToCountAccessTokens = "failed to count access tokens"
+	ErrMsgFailedToGetAccessTokens   = "failed to get access tokens"
+	ErrMsgFailedToCreateUser        = "failed to create user"
+	ErrMsgFailedToUpdateUser        = "failed to update user"
+	ErrMsgFailedToGetUserByID       = "failed to get user by ID"
+	ErrMsgFailedToGetUserByEmail    = "failed to get user by email"
+	ErrMsgFailedToGetUserByUsername = "failed to get user by username"
+	ErrMsgFailedToUpdatePassword    = "failed to update password"
+	ErrMsgFailedToDeleteUser        = "failed to delete user"
+	ErrMsgFailedToGetAffectedRows   = "failed to get affected rows"
+
+	// OAuth-related errors
+	ErrMsgUnsupportedResponseType = "unsupported_response_type"
+	ErrMsgInvalidClient           = "invalid_client"
+	ErrMsgInvalidGrant            = "invalid_grant"
+	ErrMsgAccessDenied            = "access_denied"
+	ErrMsgUserDeniedAccess        = "user denied access"
+
+	// User-related errors
+	ErrMsgInvalidRequestFormat   = "invalid request format"
+	ErrMsgEmailAlreadyRegistered = "email already registered"
+	ErrMsgUsernameAlreadyTaken   = "username already taken"
+	ErrMsgInvalidCredentials     = "invalid credentials"
+	ErrMsgAccountNotActive       = "account is not active"
+	ErrMsgUserNotFound           = "user not found"
+	ErrMsgIncorrectPassword      = "incorrect password"
+
+	// Token-related errors
+	ErrMsgTokenIdRequired               = "token ID is required"
+	ErrMsgFailedToGenerateAccessToken   = "failed to generate access token"
+	ErrMsgFailedToGenerateRefreshToken  = "failed to generate refresh token"
+	ErrMsgRefreshTokenNotIssuedToClient = "refresh token was not issued to this client"
+	ErrMsgRequestedScopeExceedsOriginal = "requested scope exceeds original scope"
+	ErrMsgTokenNotBelongToClient        = "token does not belong to client"
+	ErrMsgNotAuthorizedToRevokeToken    = "not authorized to revoke this token"
+
+	// Client-related errors
+	ErrMsgClientNotFound              = "client not found"
+	ErrMsgInvalidClientId             = "invalid client ID: must be a positive integer"
+	ErrMsgClientIdAlreadyExists       = "client with this client_id already exists"
+	ErrMsgInvalidClientCredentials    = "invalid client credentials"
+	ErrMsgClientNotActive             = "client is not active"
+	ErrMsgNotAuthorizedForClient      = "not authorized to update this client"
+	ErrMsgNotAuthorizedToDeleteClient = "not authorized to delete this client"
+
+	// OAuth-related additional errors
+	ErrMsgAuthorizationCodeNotFound  = "authorization code not found"
+	ErrMsgInvalidRedirectUri         = "invalid_redirect_uri"
+	ErrMsgInvalidCodeChallengeMethod = "invalid_code_challenge_method"
+	ErrMsgInvalidScope               = "invalid_scope"
+	ErrMsgFailedToGenerateAuthCode   = "failed to generate authorization code"
+	ErrMsgFailedToSaveAuthCode       = "failed to save authorization code"
+	ErrMsgUnsupportedGrantType       = "unsupported_grant_type"
+	ErrMsgInvalidRequest             = "invalid_request"
+	ErrMsgFailedToGetAuthCode        = "failed to get authorization code"
+	ErrMsgFailedToMarkCodeAsUsed     = "failed to mark code as used"
+	// ErrMsgAuthCodeNotFound           = "Authorization code not found" // This is a duplicate of ErrMsgAuthorizationCodeNotFound
+	ErrMsgFailedToDeleteExpiredCodes = "failed to delete expired codes"
+	ErrMsgInvalidBasicAuthFormat     = "invalid basic auth format"
+	ErrMsgMissingClientId            = "missing client_id"
+
+	// IP control errors
+	ErrMsgAccessDeniedIp    = "access denied from your IP address"
+	ErrMsgIpNotAuthorized   = "your IP address is not authorized"
+	ErrMsgRateLimitExceeded = "rate limit exceeded"
+
+	// Database operation errors
+	ErrMsgFailedToSaveUserConsent              = "failed to save user consent"
+	ErrMsgFailedToScanAccessToken              = "failed to scan access token"
+	ErrMsgErrorIteratingAccessTokens           = "error iterating access tokens"
+	ErrMsgFailedToRevokeAccessToken            = "failed to revoke access token"
+	ErrMsgFailedToRevokeAccessTokens           = "failed to revoke access tokens"
+	ErrMsgFailedToRevokeAccessTokensByAuthCode = "failed to revoke access tokens by auth code"
+	ErrMsgFailedToCheckTokenRevocationStatus   = "failed to check token revocation status"
+	ErrMsgFailedToScanRefreshToken             = "failed to scan refresh token"
+	ErrMsgErrorIteratingRefreshTokens          = "error iterating refresh tokens"
+	ErrMsgFailedToRevokeRefreshToken           = "failed to revoke refresh token"
+	ErrMsgFailedToRevokeRefreshTokens          = "failed to revoke refresh tokens"
+	ErrMsgFailedToFindAuthCode                 = "Failed to find authorization code"
+	ErrMsgFailedToUpdateUserConsent            = "Failed to update user consent"
+	ErrMsgUserConsentNotFoundForUser           = "User consent not found for user ID %d"
+	ErrMsgUserConsentNotFoundForClient         = "User consent not found for client ID %s"
+	ErrMsgUserConsentNotFoundForUserAndClient  = "User consent not found for user ID %d and client ID %s"
+	ErrMsgFailedToDeleteUserConsent            = "Failed to delete user consent"
+	ErrMsgFailedToFindUserConsent              = "Failed to find user consent"
+	ErrMsgFailedToFindRefreshTokenByHash       = "failed to find refresh token by hash"
+	ErrMsgFailedToCountRefreshTokens           = "failed to count refresh tokens"
+	ErrMsgFailedToGetRefreshTokens             = "failed to get refresh tokens"
+	ErrMsgFailedToFindRefreshToken             = "failed to find refresh token"
+
+	// Redis cache errors
+	ErrMsgFailedToMarshalRefreshToken        = "failed to marshal refresh token"
+	ErrMsgFailedToUnmarshalRefreshToken      = "failed to unmarshal refresh token"
+	ErrMsgFailedToMarshalUpdatedRefreshToken = "failed to marshal updated refresh token"
+
+	// No duplicate token repository errors needed as they're already defined above
+
+	// Generic errors
+	ErrMsgInternalServerError = "internal_server_error"
+	ErrMsgUnexpectedError     = "an unexpected error occurred"
 )
 
 // CustomError represents a structured error with HTTP status code and optional details.

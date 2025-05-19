@@ -36,8 +36,8 @@ func ErrorHandler() gin.HandlerFunc {
 
 			// Handle unknown error types with a generic 500 response
 			c.JSON(500, gin.H{
-				"error":             "internal_server_error",
-				"error_description": "An unexpected error occurred",
+				"error":             errors.ErrMsgInternalServerError,
+				"error_description": errors.ErrMsgUnexpectedError,
 			})
 		}
 	}

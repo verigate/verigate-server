@@ -37,7 +37,7 @@ func IPControlMiddleware(ipControl *IPControl) gin.HandlerFunc {
 		// Check blacklist first
 		for _, blockedIP := range ipControl.Blacklist {
 			if matchIP(clientIP, blockedIP) {
-				c.Error(errors.Forbidden("Access denied from your IP address"))
+				c.Error(errors.Forbidden(errors.ErrMsgAccessDeniedIp))
 				c.Abort()
 				return
 			}
@@ -54,7 +54,7 @@ func IPControlMiddleware(ipControl *IPControl) gin.HandlerFunc {
 			}
 
 			if !allowed {
-				c.Error(errors.Forbidden("Your IP address is not authorized"))
+				c.Error(errors.Forbidden(errors.ErrMsgIpNotAuthorized))
 				c.Abort()
 				return
 			}

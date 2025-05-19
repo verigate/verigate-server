@@ -88,14 +88,14 @@ func (s *Service) CreateTokenPair(ctx context.Context, userID uint, userAgent, i
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	accessToken, err := token.SignedString(s.privateKey)
 	if err != nil {
-		return nil, errors.Internal("failed to generate access token")
+		return nil, errors.Internal(errors.ErrMsgFailedToGenerateAccessToken)
 	}
 
 	// Generate refresh token
 	refreshTokenID := uuid.New().String()
 	refreshTokenBytes := make([]byte, 32)
 	if _, err := rand.Read(refreshTokenBytes); err != nil {
-		return nil, errors.Internal("failed to generate refresh token")
+		return nil, errors.Internal(errors.ErrMsgFailedToGenerateRefreshToken)
 	}
 	refreshToken := base64.URLEncoding.EncodeToString(refreshTokenBytes)
 	refreshExpiry := now.Add(s.refreshExpiry)
@@ -140,18 +140,18 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken, userAgent, ip
 	}
 
 	if token == nil {
-		return nil, errors.Unauthorized("invalid refresh token")
+		return nil, errors.Unauthorized(errors.ErrMsgInvalidToken)
 	}
 
 	// Validate token
 	if token.IsRevoked {
 		// If token is revoked, revoke all user tokens for security
 		s.repo.RevokeAllUserRefreshTokens(ctx, token.UserID)
-		return nil, errors.Unauthorized("refresh token has been revoked")
+		return nil, errors.Unauthorized(errors.ErrMsgTokenRevoked)
 	}
 
 	if time.Now().After(token.ExpiresAt) {
-		return nil, errors.Unauthorized("refresh token has expired")
+		return nil, errors.Unauthorized(errors.ErrMsgTokenExpired)
 	}
 
 	// Revoke current refresh token (RTR pattern)
