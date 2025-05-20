@@ -90,7 +90,6 @@ const (
 	ErrMsgInvalidRequest             = "invalid_request"
 	ErrMsgFailedToGetAuthCode        = "failed to get authorization code"
 	ErrMsgFailedToMarkCodeAsUsed     = "failed to mark code as used"
-	// ErrMsgAuthCodeNotFound           = "Authorization code not found" // This is a duplicate of ErrMsgAuthorizationCodeNotFound
 	ErrMsgFailedToDeleteExpiredCodes = "failed to delete expired codes"
 	ErrMsgInvalidBasicAuthFormat     = "invalid basic auth format"
 	ErrMsgMissingClientId            = "missing client_id"
@@ -123,11 +122,6 @@ const (
 	ErrMsgFailedToCountRefreshTokens           = "failed to count refresh tokens"
 	ErrMsgFailedToGetRefreshTokens             = "failed to get refresh tokens"
 	ErrMsgFailedToFindRefreshToken             = "failed to find refresh token"
-	// ErrMsgFailedToRevokeRefreshTokens is already defined above
-	// ErrMsgFailedToMarshalRefreshToken is defined below in Redis cache errors
-	// ErrMsgFailedToUnmarshalRefreshToken is defined below in Redis cache errors
-	// ErrMsgFailedToMarshalUpdatedRefreshToken is defined below in Redis cache errors
-	// ErrMsgFailedToGetAffectedRows          = "Failed to get affected rows" // This one already exists
 
 	// Client Repository Errors
 	ErrMsgFailedToCreateClient             = "Failed to create client"
@@ -143,27 +137,15 @@ const (
 	ErrMsgClientWithIDNotFound             = "Client with ID %d not found"
 
 	// User Repository Errors
-	// ErrMsgFailedToCreateUser           = "Failed to create user" // Already defined
-	// ErrMsgFailedToUpdateUser is already defined
-	// ErrMsgFailedToGetAffectedRows is already defined
-	// ErrMsgUserNotFound is already defined
-	// ErrMsgFailedToGetUserByID          = "Failed to get user by ID" // Already defined
-	// ErrMsgFailedToGetUserByEmail       = "Failed to get user by email" // Already defined
-	// ErrMsgFailedToGetUserByUsername    = "Failed to get user by username" // Already defined
-	// ErrMsgFailedToUpdatePassword is already defined
-	// ErrMsgFailedToDeleteUser           = "Failed to delete user" // Already defined
 
 	// Scope Repository Errors
 	ErrMsgFailedToFindScopeByName = "Failed to find scope by name '%s'"
 
 	// Redis cache errors
-	// These were duplicated above with different capitalization, keeping only these lowercase versions
 	ErrMsgFailedToMarshalRefreshToken        = "failed to marshal refresh token"
 	ErrMsgFailedToUnmarshalRefreshToken      = "failed to unmarshal refresh token"
 	ErrMsgFailedToMarshalUpdatedRefreshToken = "failed to marshal updated refresh token"
-	ErrMsgFailedToGetRefreshToken            = "failed to get refresh token" // Added missing constant
-
-	// No duplicate token repository errors needed as they're already defined above
+	ErrMsgFailedToGetRefreshToken            = "failed to get refresh token"
 
 	// Generic errors
 	ErrMsgInternalServerError = "internal_server_error"
