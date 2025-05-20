@@ -45,7 +45,7 @@ func (r *scopeRepository) Save(ctx context.Context, scope *scope.Scope) error {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return errors.Conflict(fmt.Sprintf("Scope with name '%s' already exists", scope.Name))
 		}
-		return errors.Internal(fmt.Sprintf("Failed to save scope: %s", err.Error()))
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToSaveScope, err.Error()))
 	}
 
 	return nil
@@ -93,7 +93,7 @@ func (r *scopeRepository) FindByNames(ctx context.Context, names []string) ([]sc
 
 	rows, err := r.db.QueryContext(ctx, query, pq.Array(names))
 	if err != nil {
-		return nil, errors.Internal(fmt.Sprintf("Failed to find scopes by names: %s", err.Error()))
+		return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToFindScopesByNames, err.Error()))
 	}
 	defer rows.Close()
 
@@ -108,13 +108,13 @@ func (r *scopeRepository) FindByNames(ctx context.Context, names []string) ([]sc
 			&s.CreatedAt,
 			&s.UpdatedAt,
 		); err != nil {
-			return nil, errors.Internal(fmt.Sprintf("Failed to scan scope data: %s", err.Error()))
+			return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToScanScopeData, err.Error()))
 		}
 		scopes = append(scopes, s)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, errors.Internal(fmt.Sprintf("Error iterating scope results: %s", err.Error()))
+		return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgErrorIteratingScopeResults, err.Error()))
 	}
 
 	return scopes, nil
@@ -131,7 +131,7 @@ func (r *scopeRepository) FindAll(ctx context.Context) ([]scope.Scope, error) {
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, errors.Internal(fmt.Sprintf("Failed to find all scopes: %s", err.Error()))
+		return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToFindAllScopes, err.Error()))
 	}
 	defer rows.Close()
 
@@ -146,13 +146,13 @@ func (r *scopeRepository) FindAll(ctx context.Context) ([]scope.Scope, error) {
 			&s.CreatedAt,
 			&s.UpdatedAt,
 		); err != nil {
-			return nil, errors.Internal(fmt.Sprintf("Failed to scan scope data: %s", err.Error()))
+			return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToScanScopeData, err.Error())) // Reusing ErrMsgFailedToScanScopeData
 		}
 		scopes = append(scopes, s)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, errors.Internal(fmt.Sprintf("Error iterating scope results: %s", err.Error()))
+		return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgErrorIteratingScopeResults, err.Error())) // Reusing ErrMsgErrorIteratingScopeResults
 	}
 
 	return scopes, nil
@@ -171,7 +171,7 @@ func (r *scopeRepository) FindDefaults(ctx context.Context) ([]scope.Scope, erro
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, errors.Internal(fmt.Sprintf("Failed to find default scopes: %s", err.Error()))
+		return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToFindDefaultScopes, err.Error()))
 	}
 	defer rows.Close()
 
@@ -186,13 +186,13 @@ func (r *scopeRepository) FindDefaults(ctx context.Context) ([]scope.Scope, erro
 			&s.CreatedAt,
 			&s.UpdatedAt,
 		); err != nil {
-			return nil, errors.Internal(fmt.Sprintf("Failed to scan default scope data: %s", err.Error()))
+			return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToScanDefaultScopeData, err.Error()))
 		}
 		scopes = append(scopes, s)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, errors.Internal(fmt.Sprintf("Error iterating default scope results: %s", err.Error()))
+		return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgErrorIteratingDefaultScopeResults, err.Error()))
 	}
 
 	return scopes, nil

@@ -139,7 +139,15 @@ const (
 	// User Repository Errors
 
 	// Scope Repository Errors
-	ErrMsgFailedToFindScopeByName = "Failed to find scope by name '%s'"
+	ErrMsgFailedToFindScopeByName           = "Failed to find scope by name '%s': %s"
+	ErrMsgFailedToSaveScope                 = "Failed to save scope"
+	ErrMsgFailedToFindScopesByNames         = "Failed to find scopes by names"
+	ErrMsgFailedToScanScopeData             = "Failed to scan scope data"
+	ErrMsgErrorIteratingScopeResults        = "Error iterating scope results"
+	ErrMsgFailedToFindAllScopes             = "Failed to find all scopes"
+	ErrMsgFailedToFindDefaultScopes         = "Failed to find default scopes"
+	ErrMsgFailedToScanDefaultScopeData      = "Failed to scan default scope data"
+	ErrMsgErrorIteratingDefaultScopeResults = "Error iterating default scope results"
 
 	// Redis cache errors
 	ErrMsgFailedToMarshalRefreshToken        = "failed to marshal refresh token"
