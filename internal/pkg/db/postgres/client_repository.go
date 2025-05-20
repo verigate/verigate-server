@@ -67,7 +67,7 @@ func (r *clientRepository) Save(ctx context.Context, client *client.Client) erro
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code.Name() == "unique_violation" {
 			return errors.Conflict(errors.ErrMsgClientIdAlreadyExists)
 		}
-		return errors.Internal("Failed to create client: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToCreateClient + ": " + err.Error())
 	}
 
 	return nil
@@ -108,16 +108,16 @@ func (r *clientRepository) Update(ctx context.Context, client *client.Client) er
 	)
 
 	if err != nil {
-		return errors.Internal("Failed to update client: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToUpdateClient + ": " + err.Error())
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows + ": " + err.Error())
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("Client with ID %d not found", client.ID))
+		return errors.NotFound(fmt.Sprintf(errors.ErrMsgClientWithIDNotFound, client.ID))
 	}
 
 	return nil
@@ -165,7 +165,7 @@ func (r *clientRepository) FindByID(ctx context.Context, id uint) (*client.Clien
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to get client by ID: " + err.Error())
+		return nil, errors.Internal(errors.ErrMsgFailedToGetClientByID + ": " + err.Error())
 	}
 
 	return &c, nil
@@ -213,7 +213,7 @@ func (r *clientRepository) FindByClientID(ctx context.Context, clientID string) 
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal("Failed to get client by client_id: " + err.Error())
+		return nil, errors.Internal(errors.ErrMsgFailedToGetClientByClientID + ": " + err.Error())
 	}
 
 	return &c, nil
@@ -229,7 +229,7 @@ func (r *clientRepository) FindByOwnerID(ctx context.Context, ownerID uint, page
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM clients WHERE owner_id = $1"
 	if err := r.db.QueryRowContext(ctx, countQuery, ownerID).Scan(&total); err != nil {
-		return nil, 0, errors.Internal("Failed to count clients: " + err.Error())
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToCountClients + ": " + err.Error())
 	}
 
 	// Get clients with pagination
@@ -246,7 +246,7 @@ func (r *clientRepository) FindByOwnerID(ctx context.Context, ownerID uint, page
 
 	rows, err := r.db.QueryContext(ctx, query, ownerID, limit, offset)
 	if err != nil {
-		return nil, 0, errors.Internal("Failed to retrieve clients by owner ID: " + err.Error())
+		return nil, 0, errors.Internal(errors.ErrMsgFailedToRetrieveClientsByOwnerID + ": " + err.Error())
 	}
 	defer rows.Close()
 
@@ -278,13 +278,13 @@ func (r *clientRepository) FindByOwnerID(ctx context.Context, ownerID uint, page
 			&c.UpdatedAt,
 			&c.OwnerID,
 		); err != nil {
-			return nil, 0, errors.Internal("Failed to scan client data: " + err.Error())
+			return nil, 0, errors.Internal(errors.ErrMsgFailedToScanClientData + ": " + err.Error())
 		}
 		clients = append(clients, c)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, errors.Internal("Error iterating client results: " + err.Error())
+		return nil, 0, errors.Internal(errors.ErrMsgErrorIteratingClientResults + ": " + err.Error())
 	}
 
 	return clients, total, nil
@@ -297,16 +297,16 @@ func (r *clientRepository) Delete(ctx context.Context, id uint) error {
 
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
-		return errors.Internal("Failed to delete client: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToDeleteClient + ": " + err.Error())
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows after deletion: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows + ": " + err.Error())
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("Client with ID %d not found", id))
+		return errors.NotFound(fmt.Sprintf(errors.ErrMsgClientWithIDNotFound, id))
 	}
 
 	return nil
@@ -324,16 +324,16 @@ func (r *clientRepository) UpdateStatus(ctx context.Context, id uint, isActive b
 
 	result, err := r.db.ExecContext(ctx, query, id, isActive)
 	if err != nil {
-		return errors.Internal("Failed to update client status: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToUpdateClientStatus + ": " + err.Error())
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal("Failed to get affected rows after status update: " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows + ": " + err.Error())
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("Client with ID %d not found", id))
+		return errors.NotFound(fmt.Sprintf(errors.ErrMsgClientWithIDNotFound, id))
 	}
 
 	return nil

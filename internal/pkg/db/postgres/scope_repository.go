@@ -75,7 +75,7 @@ func (r *scopeRepository) FindByName(ctx context.Context, name string) (*scope.S
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Internal(fmt.Sprintf("Failed to find scope by name '%s': %s", name, err.Error()))
+		return nil, errors.Internal(fmt.Sprintf(errors.ErrMsgFailedToFindScopeByName, name, err.Error()))
 	}
 
 	return &s, nil

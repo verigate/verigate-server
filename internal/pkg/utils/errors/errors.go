@@ -123,11 +123,45 @@ const (
 	ErrMsgFailedToCountRefreshTokens           = "failed to count refresh tokens"
 	ErrMsgFailedToGetRefreshTokens             = "failed to get refresh tokens"
 	ErrMsgFailedToFindRefreshToken             = "failed to find refresh token"
+	// ErrMsgFailedToRevokeRefreshTokens is already defined above
+	// ErrMsgFailedToMarshalRefreshToken is defined below in Redis cache errors
+	// ErrMsgFailedToUnmarshalRefreshToken is defined below in Redis cache errors
+	// ErrMsgFailedToMarshalUpdatedRefreshToken is defined below in Redis cache errors
+	// ErrMsgFailedToGetAffectedRows          = "Failed to get affected rows" // This one already exists
+
+	// Client Repository Errors
+	ErrMsgFailedToCreateClient             = "Failed to create client"
+	ErrMsgFailedToUpdateClient             = "Failed to update client"
+	ErrMsgFailedToGetClientByID            = "Failed to get client by ID"
+	ErrMsgFailedToGetClientByClientID      = "Failed to get client by client_id"
+	ErrMsgFailedToCountClients             = "Failed to count clients"
+	ErrMsgFailedToRetrieveClientsByOwnerID = "Failed to retrieve clients by owner ID"
+	ErrMsgFailedToScanClientData           = "Failed to scan client data"
+	ErrMsgErrorIteratingClientResults      = "Error iterating client results"
+	ErrMsgFailedToDeleteClient             = "Failed to delete client"
+	ErrMsgFailedToUpdateClientStatus       = "Failed to update client status"
+	ErrMsgClientWithIDNotFound             = "Client with ID %d not found"
+
+	// User Repository Errors
+	// ErrMsgFailedToCreateUser           = "Failed to create user" // Already defined
+	// ErrMsgFailedToUpdateUser is already defined
+	// ErrMsgFailedToGetAffectedRows is already defined
+	// ErrMsgUserNotFound is already defined
+	// ErrMsgFailedToGetUserByID          = "Failed to get user by ID" // Already defined
+	// ErrMsgFailedToGetUserByEmail       = "Failed to get user by email" // Already defined
+	// ErrMsgFailedToGetUserByUsername    = "Failed to get user by username" // Already defined
+	// ErrMsgFailedToUpdatePassword is already defined
+	// ErrMsgFailedToDeleteUser           = "Failed to delete user" // Already defined
+
+	// Scope Repository Errors
+	ErrMsgFailedToFindScopeByName = "Failed to find scope by name '%s'"
 
 	// Redis cache errors
+	// These were duplicated above with different capitalization, keeping only these lowercase versions
 	ErrMsgFailedToMarshalRefreshToken        = "failed to marshal refresh token"
 	ErrMsgFailedToUnmarshalRefreshToken      = "failed to unmarshal refresh token"
 	ErrMsgFailedToMarshalUpdatedRefreshToken = "failed to marshal updated refresh token"
+	ErrMsgFailedToGetRefreshToken            = "failed to get refresh token" // Added missing constant
 
 	// No duplicate token repository errors needed as they're already defined above
 

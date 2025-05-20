@@ -109,7 +109,7 @@ func (r *oauthRepository) MarkCodeAsUsed(ctx context.Context, code string) error
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return errors.Internal(errors.ErrMsgFailedToGetAffectedRows)
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToGetAffectedRows, err.Error()))
 	}
 
 	if rows == 0 {
