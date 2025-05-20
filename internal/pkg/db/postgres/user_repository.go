@@ -87,7 +87,7 @@ func (r *userRepository) Update(ctx context.Context, user *user.User) error {
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("%s: ID %d", errors.ErrMsgUserNotFound, user.ID))
+		return errors.NotFound(fmt.Sprintf(errors.ErrMsgUserNotFound+": ID %d", user.ID)) // Keep Sprintf for ID
 	}
 
 	return nil
@@ -221,7 +221,7 @@ func (r *userRepository) UpdatePassword(ctx context.Context, id uint, passwordHa
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("%s: ID %d", errors.ErrMsgUserNotFound, id))
+		return errors.NotFound(fmt.Sprintf(errors.ErrMsgUserNotFound+": ID %d", id)) // Keep Sprintf for ID
 	}
 
 	return nil
@@ -240,7 +240,7 @@ func (r *userRepository) UpdateLastLogin(ctx context.Context, id uint) error {
 
 	_, err := r.db.ExecContext(ctx, query, id, time.Now())
 	if err != nil {
-		return errors.Internal(errors.ErrMsgFailedToUpdateUser + ": " + err.Error())
+		return errors.Internal(errors.ErrMsgFailedToUpdateUser + ": " + err.Error()) // Assuming this is a general update failure
 	}
 
 	return nil
@@ -263,7 +263,7 @@ func (r *userRepository) Delete(ctx context.Context, id uint) error {
 	}
 
 	if rows == 0 {
-		return errors.NotFound(fmt.Sprintf("%s: ID %d", errors.ErrMsgUserNotFound, id))
+		return errors.NotFound(fmt.Sprintf(errors.ErrMsgUserNotFound+": ID %d", id)) // Keep Sprintf for ID
 	}
 
 	return nil

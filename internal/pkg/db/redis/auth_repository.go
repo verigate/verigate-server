@@ -58,7 +58,7 @@ func (r *authRepository) SaveRefreshToken(ctx context.Context, token *auth.Refre
 	// Execute pipeline
 	_, err = pipe.Exec(ctx)
 	if err != nil {
-		return errors.Internal("failed to save refresh token: " + err.Error())
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToSaveRefreshToken, err.Error()))
 	}
 
 	return nil
@@ -73,7 +73,7 @@ func (r *authRepository) FindRefreshToken(ctx context.Context, tokenID string) (
 	if err == redis.Nil {
 		return nil, nil // Token doesn't exist
 	} else if err != nil {
-		return nil, errors.Internal("failed to find refresh token: " + err.Error())
+		return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToFindRefreshToken, err.Error()))
 	}
 
 	var token auth.RefreshToken
@@ -96,7 +96,7 @@ func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, hashedToke
 	for {
 		keys, cursor, err = r.client.Scan(ctx, cursor, refreshTokenKeyPrefix+"*", 100).Result()
 		if err != nil {
-			return nil, errors.Internal("failed to scan refresh tokens: " + err.Error())
+			return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToScanRefreshToken, err.Error()))
 		}
 
 		// Check each token
@@ -134,7 +134,7 @@ func (r *authRepository) RevokeRefreshToken(ctx context.Context, tokenID string)
 	if err == redis.Nil {
 		return errors.NotFound(errors.ErrMsgRefreshTokenNotFound)
 	} else if err != nil {
-		return errors.Internal("failed to get refresh token: " + err.Error())
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToGetRefreshToken, err.Error()))
 	}
 
 	var token auth.RefreshToken
@@ -167,7 +167,7 @@ func (r *authRepository) RevokeAllUserRefreshTokens(ctx context.Context, userID 
 	// Get all token IDs for the user
 	tokenIDs, err := r.client.SMembers(ctx, userTokensKey).Result()
 	if err != nil && err != redis.Nil {
-		return errors.Internal("failed to get user tokens: " + err.Error())
+		return errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToGetRefreshTokens, err.Error()))
 	}
 
 	// Revoke each token
