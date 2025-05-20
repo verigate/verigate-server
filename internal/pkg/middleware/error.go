@@ -22,12 +22,13 @@ func ErrorHandler() gin.HandlerFunc {
 			// Handle CustomError types with proper status codes and details
 			if customErr, ok := err.(errors.CustomError); ok {
 				response := gin.H{
-					"error": customErr.Message,
+					"error":             customErr.Message, // Keep "error" for the main message
+					"error_description": customErr.Error(), // Use .Error() for a more detailed description
 				}
 
-				// Add error details if available
+				// Add error details if available and different from the main error string
 				if customErr.Details != nil {
-					response["error_description"] = customErr.Details
+					response["details"] = customErr.Details // Use a separate field for structured details
 				}
 
 				c.JSON(customErr.Status, response)

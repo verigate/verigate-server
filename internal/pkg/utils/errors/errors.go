@@ -175,6 +175,7 @@ func (e CustomError) Error() string {
 		if details, err := json.Marshal(e.Details); err == nil {
 			return fmt.Sprintf("status: %d, message: %s, details: %s", e.Status, e.Message, string(details))
 		}
+		return fmt.Sprintf("status: %d, message: %s, details: (marshalling failed)", e.Status, e.Message) // Indicate marshalling failure
 	}
 	return fmt.Sprintf("status: %d, message: %s", e.Status, e.Message)
 }
