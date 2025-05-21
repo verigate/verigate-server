@@ -6,11 +6,9 @@ package auth
 import (
 	"context"
 	"crypto/rand"
-	"crypto/rsa"
 	"encoding/base64"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/verigate/verigate-server/internal/pkg/config"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
@@ -23,27 +21,17 @@ import (
 // as well as other authentication-related operations.
 type Service struct {
 	repo              Repository
-	privateKey        *rsa.PrivateKey
-	publicKey         *rsa.PublicKey
 	accessExpiry      time.Duration
 	refreshExpiry     time.Duration
 	accessTokenIssuer string
 }
 
 // NewService creates a new authentication service instance.
-// It initializes the service with RSA keys and token expiration settings
+// It initializes the service with token expiration settings
 // loaded from the application configuration.
+// Note: The RSA keys are managed centrally by the JWT utility package.
 func NewService(repo Repository) *Service {
-	// Parse JWT keys
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.AppConfig.JWTPrivateKey))
-	if err != nil {
-		panic("failed to parse private key: " + err.Error())
-	}
-
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(config.AppConfig.JWTPublicKey))
-	if err != nil {
-		panic("failed to parse public key: " + err.Error())
-	}
+	// JWT keys are now initialized in main.go via jwt.InitKeys()
 
 	// Parse expiry durations
 	accessExpiry, err := time.ParseDuration(config.AppConfig.JWTAccessExpiry)
@@ -58,8 +46,6 @@ func NewService(repo Repository) *Service {
 
 	return &Service{
 		repo:              repo,
-		privateKey:        privateKey,
-		publicKey:         publicKey,
 		accessExpiry:      accessExpiry,
 		refreshExpiry:     refreshExpiry,
 		accessTokenIssuer: "verigate-web", // Distinct from OAuth tokens
@@ -74,19 +60,9 @@ func (s *Service) CreateTokenPair(ctx context.Context, userID uint, userAgent, i
 	// Generate access token
 	tokenID := uuid.New().String()
 	now := time.Now()
-	accessExpiry := now.Add(s.accessExpiry)
 
-	claims := jwt.MapClaims{
-		jwtutil.ClaimKeyJTI:  tokenID,
-		jwtutil.ClaimKeySub:  userID,
-		jwtutil.ClaimKeyIAT:  now.Unix(),
-		jwtutil.ClaimKeyEXP:  accessExpiry.Unix(),
-		jwtutil.ClaimKeyISS:  s.accessTokenIssuer,
-		jwtutil.ClaimKeyType: jwtutil.TokenTypeAccess,
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	accessToken, err := token.SignedString(s.privateKey)
+	// Use the GenerateCustomToken function from JWT utility package
+	accessToken, err := jwtutil.GenerateCustomToken(userID, s.accessTokenIssuer, jwtutil.TokenTypeAccess, tokenID, s.accessExpiry)
 	if err != nil {
 		return nil, errors.Internal(errors.ErrMsgFailedToGenerateAccessToken)
 	}
@@ -125,7 +101,7 @@ func (s *Service) CreateTokenPair(ctx context.Context, userID uint, userAgent, i
 	return &TokenPair{
 		AccessToken:           accessToken,
 		RefreshToken:          refreshToken,
-		AccessTokenExpiresAt:  accessExpiry,
+		AccessTokenExpiresAt:  now.Add(s.accessExpiry),
 		RefreshTokenExpiresAt: refreshExpiry,
 	}, nil
 }

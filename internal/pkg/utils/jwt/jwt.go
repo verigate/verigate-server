@@ -43,25 +43,33 @@ var (
 	publicKey  *rsa.PublicKey  // RSA public key for token validation
 )
 
-// init initializes the JWT package by loading the RSA keys from configuration.
-// Panics if the keys cannot be parsed, as this indicates a critical configuration error.
-func init() {
-	// Initialize keys when config is loaded
-	if config.AppConfig.JWTPrivateKey != "" {
-		pk, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.AppConfig.JWTPrivateKey))
-		if err != nil {
-			panic("failed to parse private key: " + err.Error())
-		}
-		privateKey = pk
+// InitKeys initializes the JWT package by loading the RSA keys from configuration.
+// Returns an error if the keys cannot be parsed or are not provided.
+func InitKeys() error {
+	// Validate that keys are provided
+	if config.AppConfig.JWTPrivateKey == "" {
+		return fmt.Errorf("JWT_PRIVATE_KEY environment variable is not set")
 	}
 
-	if config.AppConfig.JWTPublicKey != "" {
-		pk, err := jwt.ParseRSAPublicKeyFromPEM([]byte(config.AppConfig.JWTPublicKey))
-		if err != nil {
-			panic("failed to parse public key: " + err.Error())
-		}
-		publicKey = pk
+	if config.AppConfig.JWTPublicKey == "" {
+		return fmt.Errorf("JWT_PUBLIC_KEY environment variable is not set")
 	}
+
+	// Parse the private key
+	pk, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.AppConfig.JWTPrivateKey))
+	if err != nil {
+		return fmt.Errorf("failed to parse private key: %w", err)
+	}
+	privateKey = pk
+
+	// Parse the public key
+	pub, err := jwt.ParseRSAPublicKeyFromPEM([]byte(config.AppConfig.JWTPublicKey))
+	if err != nil {
+		return fmt.Errorf("failed to parse public key: %w", err)
+	}
+	publicKey = pub
+
+	return nil
 }
 
 // GenerateToken creates a new JWT token for the specified user.
@@ -80,6 +88,31 @@ func GenerateToken(userID uint) (string, error) {
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    TokenIssuer,
 		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	return token.SignedString(privateKey)
+}
+
+// GenerateCustomToken creates a JWT token with custom parameters.
+// It allows specifying the issuer, token type, and expiration duration.
+// Returns the signed token string or an error if signing fails.
+func GenerateCustomToken(userID uint, issuer string, tokenType string, tokenID string, expiry time.Duration) (string, error) {
+	// Verify that the private key is available
+	if privateKey == nil {
+		return "", fmt.Errorf("JWT private key not initialized")
+	}
+
+	now := time.Now()
+
+	claims := jwt.MapClaims{
+		ClaimKeyJTI:    tokenID,
+		ClaimKeySub:    userID,
+		ClaimKeyIAT:    now.Unix(),
+		ClaimKeyEXP:    now.Add(expiry).Unix(),
+		ClaimKeyISS:    issuer,
+		ClaimKeyType:   tokenType,
+		ClaimKeyUserID: userID,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
