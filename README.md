@@ -4,7 +4,7 @@
   
   [![Go Report Card](https://goreportcard.com/badge/github.com/verigate/verigate-server)](https://goreportcard.com/report/github.com/verigate/verigate-server)
   [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Go version](https://img.shields.io/github/go-mod/go-version/verigate/verigate-server)](https://github.com/verigate/verigate-server)
+  [![Go version](https://img.shields.io/badge/Go-1.24.2-blue)](https://github.com/verigate/verigate-server)
   
 </div>
 
@@ -19,6 +19,10 @@ Verigate Server is a robust, secure, and standards-compliant OAuth 2.0 and OpenI
   - Authorization Code Flow with PKCE
   - Refresh Token Flow
   - Token Revocation (RFC 7009)
+  - OAuth 2.1 Compatible Security Mechanisms
+    - Mandatory PKCE for Authorization Code Flow
+    - Refresh Token Rotation
+    - JWT Access Tokens
 
 - **OpenID Connect Support**
 
@@ -28,6 +32,7 @@ Verigate Server is a robust, secure, and standards-compliant OAuth 2.0 and OpenI
 - **Advanced Security Features**
 
   - JSON Web Tokens (JWT) with RSA Signing
+  - Refresh Token Rotation (RTR)
   - Rate Limiting
   - IP Access Control
   - PKCE for Public Clients
@@ -41,13 +46,15 @@ Verigate Server is a robust, secure, and standards-compliant OAuth 2.0 and OpenI
 - **Scalable Architecture**
   - PostgreSQL for Persistence
   - Redis for Caching and Rate Limiting
+  - Stateless JWT Authentication
+  - Security-focused Token Management
   - Docker Support
 
 ## Getting Started
 
 ### Prerequisites
 
-- Go 1.18 or higher
+- Go 1.24.2 or higher
 - PostgreSQL 13 or higher
 - Redis 6 or higher
 - Docker and Docker Compose (optional)
@@ -128,6 +135,16 @@ JWT_REFRESH_EXPIRY=7d
 - `GET /oauth/consent` - User consent page
 - `POST /oauth/consent` - User consent submission
 
+### Token Security
+
+Verigate implements multiple layers of token security:
+
+- **Access Tokens**: Short-lived JWTs signed with RSA-256
+- **Refresh Token Rotation**: Each use of a refresh token invalidates it and issues a new one
+- **Token Revocation**: Support for both access and refresh token revocation
+- **Token Expiration**: Configurable, separate expiration periods for each token type
+- **Token Validation**: Full validation of signature, claims, expiry, and revocation status
+
 ### Client Management Endpoints
 
 - `POST /clients` - Register a new client
@@ -156,15 +173,73 @@ Verigate Server follows a clean architecture pattern with distinct layers:
 - **Repository Layer** - Data access and persistence
 - **Domain Layer** - Core business models and rules
 
+## Technical Architecture
+
+Verigate Server follows a clean architecture pattern with distinct layers:
+
+- **API Layer** - HTTP handlers and middleware
+- **Service Layer** - Business logic and workflows
+- **Repository Layer** - Data access and persistence
+- **Domain Layer** - Core business models and rules
+
+### Key Components
+
+- **Authentication Service** - Manages authentication flows and token lifecycle
+- **OAuth Service** - Handles OAuth protocol operations including authorization and token management
+- **User Service** - Manages user accounts and profile information
+- **Client Service** - Handles OAuth client registration and configuration
+- **Token Service** - Manages token generation, validation, and revocation
+- **Scope Service** - Controls permission scopes for access control
+
+### Technology Stack
+
+- **Go 1.24.2** - Core programming language
+- **Gin** - HTTP web framework
+- **JWT** - Token generation and validation
+- **PostgreSQL** - Primary persistent storage
+- **Redis** - Caching and ephemeral data storage
+- **bcrypt** - Password hashing
+- **Docker** - Containerization
+
 ## Security
 
 Verigate Server implements security best practices including:
 
 - Secure password hashing with bcrypt
 - JWT tokens with RSA signatures
+- Refresh Token Rotation (RTR) to prevent token replay attacks
+- Comprehensive error handling with detailed structured responses
 - Protection against common OAuth vulnerabilities
 - Rate limiting to prevent abuse
 - IP-based access control
+
+## Error Handling
+
+Verigate Server implements a robust error handling system:
+
+- Structured error responses with status codes, messages, and optional details
+- Consistent error format across all API endpoints
+- Detailed error descriptions for debugging while maintaining security
+- Custom error types that map to appropriate HTTP status codes
+- Support for both OAuth 2.0 error format and standard API error responses
+
+The server uses a `CustomError` type that provides:
+
+- HTTP status code
+- Error message
+- Structured details (JSON-serializable)
+- Comprehensive string representation including all error details
+- Graceful handling of JSON marshalling failures
+
+Error responses in OAuth contexts follow the standard format:
+
+```json
+{
+  "error": "error_code",
+  "error_description": "Human-readable error description",
+  "details": { "additional": "structured information" }
+}
+```
 
 ## Development
 
