@@ -16,6 +16,7 @@ import (
 	"github.com/verigate/verigate-server/internal/pkg/db/postgres"
 	"github.com/verigate/verigate-server/internal/pkg/db/redis"
 	"github.com/verigate/verigate-server/internal/pkg/middleware"
+	"github.com/verigate/verigate-server/internal/pkg/utils/jwt"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -33,6 +34,11 @@ func main() {
 	defer logger.Sync()
 
 	sugar := logger.Sugar()
+
+	// Initialize JWT keys
+	if err := jwt.InitKeys(); err != nil {
+		sugar.Fatalf("Failed to initialize JWT keys: %v", err)
+	}
 
 	// Database connections
 	redisClient, err := redis.NewConnection()
