@@ -84,10 +84,10 @@ func (r *authRepository) FindRefreshToken(ctx context.Context, tokenID string) (
 	return &token, nil
 }
 
-// FindRefreshTokenByToken looks up a refresh token by its hashed token value.
-// This is a more expensive operation as it requires scanning all tokens.
+// FindRefreshTokenByToken looks up a refresh token by its plain text token value.
+// This is a more expensive operation as it requires scanning all tokens and comparing hashes.
 // Returns nil if the token doesn't exist.
-func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, hashedToken string) (*auth.RefreshToken, error) {
+func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, plainTextToken string) (*auth.RefreshToken, error) {
 	// Scan all token keys
 	var cursor uint64
 	var keys []string
@@ -112,7 +112,7 @@ func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, hashedToke
 			}
 
 			// Verify the token using hash compare
-			if hash.CompareHashAndPassword(token.Token, hashedToken) == nil {
+			if hash.CompareHashAndPassword(token.Token, plainTextToken) == nil {
 				return &token, nil
 			}
 		}
