@@ -18,10 +18,11 @@ type Repository interface {
 	// Returns nil if the token doesn't exist.
 	FindRefreshToken(ctx context.Context, tokenID string) (*RefreshToken, error)
 
-	// FindRefreshTokenByToken finds a refresh token by its hashed token value.
+	// FindRefreshTokenByToken finds a refresh token by its plain text token value.
+	// It scans all tokens and compares the input with stored hashed values.
 	// This is used during token refresh operations.
 	// Returns nil if the token doesn't exist.
-	FindRefreshTokenByToken(ctx context.Context, hashedToken string) (*RefreshToken, error)
+	FindRefreshTokenByToken(ctx context.Context, plainTextToken string) (*RefreshToken, error)
 
 	// RevokeRefreshToken marks a specific token as revoked.
 	// It should return an error if the token doesn't exist.
