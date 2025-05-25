@@ -88,9 +88,6 @@ func (r *authRepository) FindRefreshToken(ctx context.Context, tokenID string) (
 // This is a more expensive operation as it requires scanning all tokens and comparing hashes.
 // Returns nil if the token doesn't exist.
 func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, plainTextToken string) (*auth.RefreshToken, error) {
-	// For debugging - add logging
-	fmt.Printf("DEBUG: Finding token by plaintext: %s (length: %d)\n", plainTextToken, len(plainTextToken))
-
 	// Scan all token keys
 	var cursor uint64
 	var keys []string
@@ -102,32 +99,22 @@ func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, plainTextT
 			return nil, errors.Internal(fmt.Sprintf("%s: %s", errors.ErrMsgFailedToScanRefreshToken, err.Error()))
 		}
 
-		fmt.Printf("DEBUG: Found %d token keys to check\n", len(keys))
-
 		// Check each token
 		for _, key := range keys {
 			data, err := r.client.Get(ctx, key).Result()
 			if err != nil {
-				fmt.Printf("DEBUG: Error getting token data for key %s: %v\n", key, err)
 				continue // Skip this token
 			}
 
 			var token auth.RefreshToken
 			if err := json.Unmarshal([]byte(data), &token); err != nil {
-				fmt.Printf("DEBUG: Error unmarshaling token data: %v\n", err)
 				continue // Skip this token
 			}
-
-			fmt.Printf("DEBUG: Comparing hash: [stored: %s (len: %d)] with plaintext (len: %d)\n",
-				token.Token[:min(10, len(token.Token))], len(token.Token), len(plainTextToken))
 
 			// Verify the token using hash compare
 			// Order matters in bcrypt: first param is the hash, second is the plaintext
 			if err := bcrypt.CompareHashAndPassword([]byte(token.Token), []byte(plainTextToken)); err == nil {
-				fmt.Printf("DEBUG: Token match found!\n")
 				return &token, nil
-			} else {
-				fmt.Printf("DEBUG: Token comparison failed: %v\n", err)
 			}
 		}
 
@@ -136,7 +123,6 @@ func (r *authRepository) FindRefreshTokenByToken(ctx context.Context, plainTextT
 		}
 	}
 
-	fmt.Println("DEBUG: No matching token found after scanning all keys")
 	return nil, nil // No matching token found
 }
 
@@ -215,12 +201,4 @@ func (r *authRepository) IsRefreshTokenRevoked(ctx context.Context, tokenID stri
 	}
 
 	return token.IsRevoked, nil
-}
-
-// Helper function to get minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
