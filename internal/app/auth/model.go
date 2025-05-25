@@ -13,7 +13,7 @@ import (
 type RefreshToken struct {
 	ID        string    `json:"id"`                   // Unique identifier for the token
 	UserID    uint      `json:"user_id"`              // User the token was issued to
-	Token     string    `json:"-"`                    // Hashed token value, not exposed in JSON
+	Token     string    `json:"token"`                // Hashed token value, stored in Redis but not returned to clients
 	ExpiresAt time.Time `json:"expires_at"`           // Expiration timestamp
 	CreatedAt time.Time `json:"created_at"`           // Creation timestamp
 	IsRevoked bool      `json:"is_revoked"`           // Whether the token has been revoked
