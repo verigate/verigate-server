@@ -1,4 +1,4 @@
-# Verigate Server
+# VeriGate™ Server
 
 <div align="center">
   
