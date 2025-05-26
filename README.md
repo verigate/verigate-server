@@ -61,7 +61,7 @@ Verigate Server is a robust, secure, and standards-compliant OAuth 2.0 and OpenI
 
 ### Installation
 
-#### Quick Start (Using docker, Recommended)
+#### Quick Start (Using Docker, Recommended)
 
 ```bash
 # Clone the repository
