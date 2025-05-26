@@ -3,11 +3,11 @@ services:
     image: postgres:13
     container_name: verigate-postgres
     environment:
-      POSTGRES_DB: verigate
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: verigate_password_123
+      POSTGRES_DB: ${POSTGRES_DB:-verigate}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -31,9 +31,9 @@ services:
 
   redis:
     image: redis:6
-    container_name: verigate-redis
+    container_name: verigate-redisdo
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -62,7 +62,7 @@ services:
       dockerfile: Dockerfile
     container_name: verigate-server
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
     env_file:
       - .env
     environment:
@@ -83,7 +83,7 @@ services:
         max-size: "20m"
         max-file: "5"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:${APP_PORT:-8080}/health"]
       interval: 5s
       timeout: 2s
       retries: 3
