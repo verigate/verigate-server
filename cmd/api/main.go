@@ -67,7 +67,7 @@ func main() {
 	userService := user.NewService(userRepo, authService)       // Modified
 	clientService := client.NewService(clientRepo, authService) // Modified
 	scopeService := scope.NewService(scopeRepo)
-	tokenService := token.NewService(tokenRepo, cacheRepo, authService, clientService)                                        // Modified
+	tokenService := token.NewService(tokenRepo, cacheRepo, authService, clientService)                               // Modified
 	oauthService := oauth.NewService(oauthRepo, userService, clientService, tokenService, scopeService, authService) // Modified
 
 	// Handlers
