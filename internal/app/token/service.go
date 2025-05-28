@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/verigate/verigate-server/internal/app/auth"
+	"github.com/verigate/verigate-server/internal/app/client"
 	"github.com/verigate/verigate-server/internal/pkg/config"
 	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 	"github.com/verigate/verigate-server/internal/pkg/utils/hash"
@@ -45,6 +46,7 @@ type Service struct {
 	tokenRepo     Repository
 	cacheRepo     CacheRepository
 	authService   *auth.Service
+	clientService *client.Service
 	privateKey    *rsa.PrivateKey
 	publicKey     *rsa.PublicKey
 	accessExpiry  time.Duration
@@ -52,7 +54,7 @@ type Service struct {
 }
 
 // NewService creates a new token service instance with the necessary dependencies.
-func NewService(tokenRepo Repository, cacheRepo CacheRepository, authService *auth.Service) *Service {
+func NewService(tokenRepo Repository, cacheRepo CacheRepository, authService *auth.Service, clientService *client.Service) *Service {
 	// Parse JWT keys
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.AppConfig.JWTPrivateKey))
 	if err != nil {
@@ -79,6 +81,7 @@ func NewService(tokenRepo Repository, cacheRepo CacheRepository, authService *au
 		tokenRepo:     tokenRepo,
 		cacheRepo:     cacheRepo,
 		authService:   authService,
+		clientService: clientService,
 		privateKey:    privateKey,
 		publicKey:     publicKey,
 		accessExpiry:  accessExpiry,
@@ -89,8 +92,28 @@ func NewService(tokenRepo Repository, cacheRepo CacheRepository, authService *au
 // CreateTokens generates new access and refresh tokens for a user.
 // It stores the tokens in the database and returns them to the client.
 func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope, authCode string) (*TokenCreateResponse, error) {
+	// Get client configuration for token lifetimes
+	client, err := s.clientService.GetByClientID(ctx, clientID)
+	if err != nil {
+		return nil, err
+	}
+	if client == nil {
+		return nil, errors.BadRequest(errors.ErrMsgInvalidClient)
+	}
+
+	// Use client-specific token lifetimes or fallback to defaults
+	accessExpiry := s.accessExpiry
+	if client.AccessTokenLifetime > 0 {
+		accessExpiry = time.Duration(client.AccessTokenLifetime) * time.Second
+	}
+
+	refreshExpiry := s.refreshExpiry
+	if client.RefreshTokenLifetime > 0 {
+		refreshExpiry = time.Duration(client.RefreshTokenLifetime) * time.Second
+	}
+
 	// Generate access token
-	accessToken, accessTokenID, err := s.createAccessToken(userID, clientID, scope)
+	accessToken, accessTokenID, err := s.createAccessTokenWithExpiry(userID, clientID, scope, accessExpiry)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +142,7 @@ func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope
 		ClientID:  clientID,
 		UserID:    userID,
 		Scope:     scope,
-		ExpiresAt: time.Now().Add(s.accessExpiry),
+		ExpiresAt: time.Now().Add(accessExpiry),
 		CreatedAt: time.Now(),
 		IsRevoked: false,
 	}
@@ -135,7 +158,7 @@ func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope
 		ClientID:      clientID,
 		UserID:        userID,
 		Scope:         scope,
-		ExpiresAt:     time.Now().Add(s.refreshExpiry),
+		ExpiresAt:     time.Now().Add(refreshExpiry),
 		CreatedAt:     time.Now(),
 		IsRevoked:     false,
 	}
@@ -145,14 +168,14 @@ func (s *Service) CreateTokens(ctx context.Context, userID uint, clientID, scope
 	}
 
 	// Cache the access token for quick validation
-	if err := s.cacheRepo.Set(ctx, CacheKeyAccessToken+accessTokenID, accessTokenModel, s.accessExpiry); err != nil {
+	if err := s.cacheRepo.Set(ctx, CacheKeyAccessToken+accessTokenID, accessTokenModel, accessExpiry); err != nil {
 		// Not critical, continue
 	}
 
 	return &TokenCreateResponse{
 		AccessToken:  accessToken,
 		TokenType:    TokenTypeBearer,
-		ExpiresIn:    int(s.accessExpiry.Seconds()),
+		ExpiresIn:    int(accessExpiry.Seconds()),
 		RefreshToken: refreshToken,
 		Scope:        scope,
 	}, nil
@@ -368,6 +391,11 @@ func (s *Service) RevokeTokensByAuthCode(ctx context.Context, authCode string) e
 
 // createAccessToken generates a new JWT access token with the specified claims.
 func (s *Service) createAccessToken(userID uint, clientID, scope string) (string, string, error) {
+	return s.createAccessTokenWithExpiry(userID, clientID, scope, s.accessExpiry)
+}
+
+// createAccessTokenWithExpiry generates a new JWT access token with the specified claims and expiry.
+func (s *Service) createAccessTokenWithExpiry(userID uint, clientID, scope string, expiry time.Duration) (string, string, error) {
 	tokenID := uuid.New().String()
 	now := time.Now()
 
@@ -377,7 +405,7 @@ func (s *Service) createAccessToken(userID uint, clientID, scope string) (string
 		jwtutil.ClaimKeyAud:   clientID,
 		jwtutil.ClaimKeyScope: scope,
 		jwtutil.ClaimKeyIAT:   now.Unix(),
-		jwtutil.ClaimKeyEXP:   now.Add(s.accessExpiry).Unix(),
+		jwtutil.ClaimKeyEXP:   now.Add(expiry).Unix(),
 		jwtutil.ClaimKeyISS:   jwtutil.TokenIssuer,
 		jwtutil.ClaimKeyType:  jwtutil.TokenTypeAccess,
 	}

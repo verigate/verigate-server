@@ -20,7 +20,20 @@ import (
 // - Sets preflight cache to 12 hours
 func CORS() gin.HandlerFunc {
 	return cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},                                                         // Allow any origin
+		AllowOriginFunc: func(origin string) bool {
+			// Allow specific origins for production
+			allowedOrigins := []string{
+				"https://verigate.injun.dev",
+				"http://localhost:3000",
+				"http://localhost:3001",
+			}
+			for _, allowed := range allowedOrigins {
+				if origin == allowed {
+					return true
+				}
+			}
+			return false
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},  // Standard HTTP methods
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"}, // Common headers
 		ExposeHeaders:    []string{"Content-Length"},                                            // Expose Content-Length header

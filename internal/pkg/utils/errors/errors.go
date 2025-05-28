@@ -84,6 +84,7 @@ const (
 	ErrMsgInvalidRedirectUri         = "invalid_redirect_uri"
 	ErrMsgInvalidCodeChallengeMethod = "invalid_code_challenge_method"
 	ErrMsgInvalidScope               = "invalid_scope"
+	ErrMsgPKCERequired               = "PKCE is required for this client"
 	ErrMsgFailedToGenerateAuthCode   = "failed to generate authorization code"
 	ErrMsgFailedToSaveAuthCode       = "failed to save authorization code"
 	ErrMsgUnsupportedGrantType       = "unsupported_grant_type"

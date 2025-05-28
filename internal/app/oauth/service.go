@@ -59,6 +59,11 @@ func (s *Service) Authorize(ctx context.Context, req AuthorizeRequest, userID ui
 		return "", errors.BadRequest(errors.ErrMsgInvalidClient)
 	}
 
+	// Validate PKCE requirements
+	if client.PKCERequired && req.CodeChallenge == "" {
+		return "", errors.BadRequest(errors.ErrMsgPKCERequired)
+	}
+
 	// Validate redirect URI
 	validRedirect := false
 	for _, uri := range client.RedirectURIs {
