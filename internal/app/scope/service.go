@@ -101,8 +101,8 @@ func (s *Service) ValidateScopeFormat(scope string) error {
 		}
 		// Scope names should contain only alphanumeric characters, underscores, and hyphens
 		for _, char := range sc {
-			if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || 
-				 (char >= '0' && char <= '9') || char == '_' || char == '-') {
+			if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+				(char >= '0' && char <= '9') || char == '_' || char == '-') {
 				return errors.BadRequest(errors.ErrMsgInvalidScopeFormat)
 			}
 		}
