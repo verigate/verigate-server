@@ -5,6 +5,8 @@ package scope
 import (
 	"context"
 	"strings"
+
+	"github.com/verigate/verigate-server/internal/pkg/utils/errors"
 )
 
 // Service handles scope-related operations including validation,
@@ -44,7 +46,7 @@ func (s *Service) ValidateScope(ctx context.Context, requested, allowed string) 
 	// Verify all requested scopes exist in the system
 	existingScopes, err := s.repo.FindByNames(ctx, requestedScopes)
 	if err != nil {
-		return false, err
+		return false, errors.Internal(errors.ErrMsgFailedToFindScopesByNames)
 	}
 
 	// Create a map of existing scope names for quick lookup
@@ -66,7 +68,7 @@ func (s *Service) ValidateScope(ctx context.Context, requested, allowed string) 
 func (s *Service) GetDefaultScopes(ctx context.Context) ([]string, error) {
 	scopes, err := s.repo.FindDefaults(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Internal(errors.ErrMsgFailedToFindDefaultScopes)
 	}
 
 	var scopeNames []string
@@ -78,5 +80,49 @@ func (s *Service) GetDefaultScopes(ctx context.Context) ([]string, error) {
 }
 
 func (s *Service) GetAllScopes(ctx context.Context) ([]Scope, error) {
-	return s.repo.FindAll(ctx)
+	scopes, err := s.repo.FindAll(ctx)
+	if err != nil {
+		return nil, errors.Internal(errors.ErrMsgFailedToFindAllScopes)
+	}
+	return scopes, nil
+}
+
+// ValidateScopeFormat checks if the scope string has a valid format.
+// Scopes should be space-separated strings containing only valid characters.
+func (s *Service) ValidateScopeFormat(scope string) error {
+	if scope == "" {
+		return errors.BadRequest(errors.ErrMsgInvalidScopeFormat)
+	}
+
+	scopes := strings.Split(scope, " ")
+	for _, sc := range scopes {
+		if sc == "" {
+			return errors.BadRequest(errors.ErrMsgInvalidScopeFormat)
+		}
+		// Scope names should contain only alphanumeric characters, underscores, and hyphens
+		for _, char := range sc {
+			if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || 
+				 (char >= '0' && char <= '9') || char == '_' || char == '-') {
+				return errors.BadRequest(errors.ErrMsgInvalidScopeFormat)
+			}
+		}
+	}
+	return nil
+}
+
+// FindScopeByName retrieves a specific scope by its name.
+// Returns an error if the scope doesn't exist.
+func (s *Service) FindScopeByName(ctx context.Context, name string) (*Scope, error) {
+	if name == "" {
+		return nil, errors.BadRequest(errors.ErrMsgInvalidScopeFormat)
+	}
+
+	scope, err := s.repo.FindByName(ctx, name)
+	if err != nil {
+		return nil, errors.Internal(errors.ErrMsgFailedToFindScopeByName)
+	}
+	if scope == nil {
+		return nil, errors.NotFound(errors.ErrMsgScopeNotFound)
+	}
+	return scope, nil
 }

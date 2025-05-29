@@ -91,20 +91,14 @@ func (h *Handler) Authorize(c *gin.Context) {
 func (h *Handler) Token(c *gin.Context) {
 	var req TokenRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:            "invalid_request",
-			ErrorDescription: "invalid request format",
-		})
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat))
 		return
 	}
 
 	// Get client credentials
 	clientID, clientSecret, err := h.getClientCredentials(c, req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error:            "invalid_client",
-			ErrorDescription: "Client authentication failed",
-		})
+		c.Error(errors.BadRequest(err.Error()))
 		return
 	}
 
@@ -112,20 +106,14 @@ func (h *Handler) Token(c *gin.Context) {
 	if clientSecret != "" {
 		client, err := h.service.ValidateClient(c.Request.Context(), clientID, clientSecret)
 		if err != nil || client == nil {
-			c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Error:            "invalid_client",
-				ErrorDescription: "Client authentication failed",
-			})
+			c.Error(errors.Unauthorized(errors.ErrMsgInvalidClientCredentials))
 			return
 		}
 	} else {
 		// Verify this is a public client
 		isPublic, err := h.service.IsPublicClient(c.Request.Context(), clientID)
 		if err != nil || !isPublic {
-			c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Error:            "invalid_client",
-				ErrorDescription: "Client authentication failed",
-			})
+			c.Error(errors.Unauthorized(errors.ErrMsgInvalidClientCredentials))
 			return
 		}
 	}
@@ -135,17 +123,7 @@ func (h *Handler) Token(c *gin.Context) {
 
 	token, err := h.service.Token(c.Request.Context(), req)
 	if err != nil {
-		if customErr, ok := err.(errors.CustomError); ok {
-			c.JSON(customErr.Status, ErrorResponse{
-				Error:            "invalid_grant",
-				ErrorDescription: customErr.Message,
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error:            "server_error",
-			ErrorDescription: "Internal server error",
-		})
+		c.Error(err)
 		return
 	}
 
@@ -159,20 +137,14 @@ func (h *Handler) Token(c *gin.Context) {
 func (h *Handler) Revoke(c *gin.Context) {
 	var req RevokeRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:            "invalid_request",
-			ErrorDescription: "invalid request format",
-		})
+		c.Error(errors.BadRequest(errors.ErrMsgInvalidRequestFormat))
 		return
 	}
 
 	// Get client credentials
 	clientID, _, err := h.getClientCredentials(c, TokenRequest{})
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error:            "invalid_client",
-			ErrorDescription: "Client authentication failed",
-		})
+		c.Error(errors.Unauthorized(errors.ErrMsgInvalidClientCredentials))
 		return
 	}
 

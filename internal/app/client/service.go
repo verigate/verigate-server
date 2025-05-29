@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"strings"
 	"time"
 
 	"github.com/verigate/verigate-server/internal/app/auth"
@@ -77,7 +78,14 @@ func (s *Service) Create(ctx context.Context, ownerID uint, req CreateClientRequ
 
 	// Save to repository
 	if err := s.repo.Save(ctx, client); err != nil {
-		return nil, err
+		// Check for specific database constraint violations
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+			if strings.Contains(err.Error(), "client_id") {
+				return nil, errors.Conflict(errors.ErrMsgClientIdAlreadyExists)
+			}
+			return nil, errors.Conflict("Client name already exists")
+		}
+		return nil, errors.Internal(errors.ErrMsgFailedToCreateClient)
 	}
 
 	// Return response with unhashed secret (only time it's available)
@@ -108,7 +116,10 @@ func (s *Service) Create(ctx context.Context, ownerID uint, req CreateClientRequ
 func (s *Service) GetByID(ctx context.Context, id uint) (*ClientResponse, error) {
 	client, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no rows") {
+			return nil, errors.NotFound(errors.ErrMsgClientNotFound)
+		}
+		return nil, errors.Internal(errors.ErrMsgFailedToGetClientByID)
 	}
 	if client == nil {
 		return nil, errors.NotFound(errors.ErrMsgClientNotFound)
@@ -123,7 +134,13 @@ func (s *Service) GetByID(ctx context.Context, id uint) (*ClientResponse, error)
 func (s *Service) GetByClientID(ctx context.Context, clientID string) (*Client, error) {
 	client, err := s.repo.FindByClientID(ctx, clientID)
 	if err != nil {
-		return nil, err
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no rows") {
+			return nil, errors.NotFound(errors.ErrMsgClientNotFound)
+		}
+		return nil, errors.Internal(errors.ErrMsgFailedToGetClientByClientID)
+	}
+	if client == nil {
+		return nil, errors.NotFound(errors.ErrMsgClientNotFound)
 	}
 	return client, nil
 }
@@ -136,7 +153,10 @@ func (s *Service) GetByClientID(ctx context.Context, clientID string) (*Client, 
 func (s *Service) Update(ctx context.Context, id uint, ownerID uint, req UpdateClientRequest) error {
 	client, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no rows") {
+			return errors.NotFound(errors.ErrMsgClientNotFound)
+		}
+		return errors.Internal(errors.ErrMsgFailedToGetClientByID)
 	}
 	if client == nil {
 		return errors.NotFound(errors.ErrMsgClientNotFound)
@@ -181,7 +201,13 @@ func (s *Service) Update(ctx context.Context, id uint, ownerID uint, req UpdateC
 	client.SoftwareVersion = req.SoftwareVersion
 	client.UpdatedAt = time.Now()
 
-	return s.repo.Update(ctx, client)
+	if err := s.repo.Update(ctx, client); err != nil {
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no rows") {
+			return errors.NotFound(errors.ErrMsgClientNotFound)
+		}
+		return errors.Internal(errors.ErrMsgFailedToUpdateClient)
+	}
+	return nil
 }
 
 // Delete removes an OAuth client if the requesting user owns it.
@@ -191,7 +217,10 @@ func (s *Service) Update(ctx context.Context, id uint, ownerID uint, req UpdateC
 func (s *Service) Delete(ctx context.Context, id uint, ownerID uint) error {
 	client, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no rows") {
+			return errors.NotFound(errors.ErrMsgClientNotFound)
+		}
+		return errors.Internal(errors.ErrMsgFailedToGetClientByID)
 	}
 	if client == nil {
 		return errors.NotFound(errors.ErrMsgClientNotFound)
@@ -202,7 +231,13 @@ func (s *Service) Delete(ctx context.Context, id uint, ownerID uint) error {
 		return errors.Forbidden(errors.ErrMsgNotAuthorizedToDeleteClient)
 	}
 
-	return s.repo.Delete(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no rows") {
+			return errors.NotFound(errors.ErrMsgClientNotFound)
+		}
+		return errors.Internal(errors.ErrMsgFailedToDeleteClient)
+	}
+	return nil
 }
 
 // List retrieves all OAuth clients owned by the specified user with pagination.
@@ -212,7 +247,7 @@ func (s *Service) Delete(ctx context.Context, id uint, ownerID uint) error {
 func (s *Service) List(ctx context.Context, ownerID uint, page, limit int) (*ClientListResponse, error) {
 	clients, total, err := s.repo.FindByOwnerID(ctx, ownerID, page, limit)
 	if err != nil {
-		return nil, err
+		return nil, errors.Internal(errors.ErrMsgFailedToRetrieveClientsByOwnerID)
 	}
 
 	var responses []ClientResponse
@@ -235,7 +270,10 @@ func (s *Service) List(ctx context.Context, ownerID uint, page, limit int) (*Cli
 func (s *Service) ValidateClient(ctx context.Context, clientID, clientSecret string) (*Client, error) {
 	client, err := s.repo.FindByClientID(ctx, clientID)
 	if err != nil {
-		return nil, err
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no rows") {
+			return nil, errors.Unauthorized(errors.ErrMsgInvalidClientCredentials)
+		}
+		return nil, errors.Internal(errors.ErrMsgFailedToGetClientByClientID)
 	}
 	if client == nil {
 		return nil, errors.Unauthorized(errors.ErrMsgInvalidClientCredentials)
