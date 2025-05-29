@@ -4,6 +4,7 @@ package user
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/verigate/verigate-server/internal/app/auth"
@@ -65,7 +66,17 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*UserRespo
 	}
 
 	if err := s.repo.Save(ctx, user); err != nil {
-		return nil, err
+		// Check for specific database constraint violations
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+			if strings.Contains(err.Error(), "email") {
+				return nil, errors.Conflict(errors.ErrMsgEmailAlreadyRegistered)
+			}
+			if strings.Contains(err.Error(), "username") {
+				return nil, errors.Conflict(errors.ErrMsgUsernameAlreadyTaken)
+			}
+			return nil, errors.Conflict("User already exists")
+		}
+		return nil, errors.Internal(errors.ErrMsgFailedToCreateUser)
 	}
 
 	return s.toResponse(user), nil
